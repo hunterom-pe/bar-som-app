@@ -64,36 +64,38 @@ export async function POST(request: NextRequest) {
     const ai = getAiClient();
     const systemInstruction = `You are a sharp, warm bartender friend. Your tone is confident, specific, a little playful, and never sommelier-pretentious.
 Write a one-sentence justification (maximum 25 words) for why the user should drink the recommended cocktail based on their current mood, adventure setting, and taste profile.
-If a runner-up is provided, also write a one-sentence justification for it.
+Also write a brief, highly specific bartender customization secret or ordering tip (maximum 12 words) for the recommended cocktail (e.g. "Order with a mezcal float", "Ask for extra orange peel", "Request an olive rinse").
+If a runner-up is provided, also write a justification and customization secret for it.
 
 Here are examples of how you talk:
-- "The mezcal paloma — smoky enough to be interesting, light enough for round two."
-- "You always come back to bitter-and-stirred. The Black Manhattan is that, but with a twist you haven't met."
-- "Date night calls for something you can sip slowly and talk over. This is that drink."
+- Justification: "The mezcal paloma — smoky enough to be interesting, light enough for round two."
+  Customization: "Ask the bartender for a smoked salt rim."
+- Justification: "You always come back to bitter-and-stirred. The Black Manhattan is that, but with a twist you haven't met."
+  Customization: "Ask for orange bitters instead of Angostura."
 
-Request ONE sentence each, capping at ~25 words. Do not use generic explanations. Highlight specific flavor interactions or vibe alignment.`;
+Do not use generic explanations. Highlight specific flavor interactions or vibe alignment.`;
 
     const promptText = `
 Vibe: ${vibe}
 Adventure Setting: ${adventure}
 User Taste Profile affinities (0-10): ${JSON.stringify(profile.affinities)}
 User Palate History: ${profile.history.slice(-5).map((h: DrinkRating) => `${h.drinkName} (${h.rating})`).join(", ") || "None yet"}
-
+ 
 Recommended Drink:
 - Name: ${pick.name}
 - Style: ${pick.styleFamily}
 - Ingredients: ${pick.ingredients.join(", ")}
 - Description: ${pick.description || "N/A"}
 - Flavor Vector: ${JSON.stringify(pick.flavorVector)}
-
+ 
 Runner-up Drink:
 ${runnerUp ? `- Name: ${runnerUp.name}
 - Style: ${runnerUp.styleFamily}
 - Ingredients: ${runnerUp.ingredients.join(", ")}
 - Description: ${runnerUp.description || "N/A"}
 - Flavor Vector: ${JSON.stringify(runnerUp.flavorVector)}` : "None"}
-
-Please generate justifications for the pick and the runner-up.
+ 
+Please generate justifications and customization secrets for the pick and the runner-up.
 `;
 
     const schema = {
@@ -103,12 +105,20 @@ Please generate justifications for the pick and the runner-up.
           type: "STRING",
           description: "One-sentence justification (max 25 words) for the primary recommended drink."
         },
+        pickCustomization: {
+          type: "STRING",
+          description: "A short, specific bartender ordering tweak or customization secret (max 12 words) for the primary recommended drink."
+        },
         runnerUpJustification: {
           type: "STRING",
           description: "One-sentence justification (max 25 words) for the runner-up drink (if none, return empty string)."
+        },
+        runnerUpCustomization: {
+          type: "STRING",
+          description: "A short, specific bartender ordering tweak or customization secret (max 12 words) for the runner-up drink (if none, return empty string)."
         }
       },
-      required: ["pickJustification", "runnerUpJustification"]
+      required: ["pickJustification", "pickCustomization", "runnerUpJustification", "runnerUpCustomization"]
     };
 
     let response;
@@ -141,13 +151,17 @@ Please generate justifications for the pick and the runner-up.
 
     const responseText = response.text;
     let pickJustification = "";
+    let pickCustomization = "";
     let runnerUpJustification = "";
+    let runnerUpCustomization = "";
 
     if (responseText) {
       try {
         const parsed = JSON.parse(responseText);
         pickJustification = parsed.pickJustification || "";
+        pickCustomization = parsed.pickCustomization || "";
         runnerUpJustification = parsed.runnerUpJustification || "";
+        runnerUpCustomization = parsed.runnerUpCustomization || "";
       } catch (err) {
         console.error("Failed to parse Gemini justification response:", responseText, err);
       }
@@ -157,15 +171,23 @@ Please generate justifications for the pick and the runner-up.
     if (!pickJustification) {
       pickJustification = `The ${pick.name} matches your vibe perfectly tonight.`;
     }
+    if (!pickCustomization) {
+      pickCustomization = "Order it exactly as specified on the menu.";
+    }
     if (runnerUp && !runnerUpJustification) {
       runnerUpJustification = `Alternatively, the ${runnerUp.name} is a fantastic choice.`;
+    }
+    if (runnerUp && !runnerUpCustomization) {
+      runnerUpCustomization = "Enjoy it standard or ask your bartender's opinion.";
     }
 
     return NextResponse.json({
       pick,
       justification: pickJustification,
+      customization: pickCustomization,
       runnerUp,
-      runnerUpJustification
+      runnerUpJustification,
+      runnerUpCustomization
     }, { headers: corsHeaders });
   } catch (error: unknown) {
     console.error("Error in /api/recommend:", error);

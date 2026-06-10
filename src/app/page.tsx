@@ -89,12 +89,15 @@ export default function Home() {
   const [recommendation, setRecommendation] = useState<{
     pick: ParsedDrink | null;
     justification: string;
+    customization: string;
     runnerUp: ParsedDrink | null;
     runnerUpJustification: string;
+    runnerUpCustomization: string;
   } | null>(null);
   
   const [activePick, setActivePick] = useState<ParsedDrink | null>(null);
   const [activeJustification, setActiveJustification] = useState("");
+  const [activeCustomization, setActiveCustomization] = useState("");
   const [reRollCount, setReRollCount] = useState(0); // Max 2
   const [excludeIds, setExcludeIds] = useState<string[]>([]);
   const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
@@ -420,6 +423,7 @@ export default function Home() {
       setRecommendation(data);
       setActivePick(data.pick);
       setActiveJustification(data.justification);
+      setActiveCustomization(data.customization || "");
       setCurrentView("recommendation");
     } catch (err) {
       console.error(err);
@@ -440,6 +444,7 @@ export default function Home() {
     if (reRollCount === 0 && recommendation.runnerUp) {
       setActivePick(recommendation.runnerUp);
       setActiveJustification(recommendation.runnerUpJustification);
+      setActiveCustomization(recommendation.runnerUpCustomization || "");
       setReRollCount(1);
     } else if (reRollCount === 1) {
       setReRollCount(2);
@@ -526,6 +531,7 @@ export default function Home() {
     setRecommendation(null);
     setActivePick(null);
     setActiveJustification("");
+    setActiveCustomization("");
     setReRollCount(0);
     setExcludeIds([]);
     setRatingDrink(null);
@@ -1019,6 +1025,21 @@ export default function Home() {
                           &ldquo;{activeJustification}&rdquo;
                         </p>
                       </blockquote>
+
+                      {/* Bartender Tweak Secret */}
+                      {activeCustomization && (
+                        <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-4 mb-6 flex items-start gap-3 select-none">
+                          <span className="text-lg leading-none mt-0.5">🔑</span>
+                          <div className="text-xs">
+                            <span className="font-bold text-amber-500 block uppercase tracking-wider font-mono mb-1 text-[10px]">
+                              Bartender&apos;s Secret Tweak
+                            </span>
+                            <span className="text-zinc-200 font-medium leading-relaxed italic">
+                              &ldquo;{activeCustomization}&rdquo;
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Ingredients */}
                       <div className="mb-4">
