@@ -33,6 +33,16 @@ const getApiUrl = (path: string): string => {
   return path;
 };
 
+const getDiagnosticLog = (progress: number): string => {
+  if (progress < 15) return "Initializing optical character reader...";
+  if (progress < 30) return "Adjusting lens contrast & camera skew...";
+  if (progress < 50) return "Binarizing text frames & mapping coordinates...";
+  if (progress < 65) return "AI: Identifying cocktail names & pricing blocks...";
+  if (progress < 80) return "SOMM: Translating flavor profiles and botanicals...";
+  if (progress < 92) return "Matching drink characteristics with your palate...";
+  return "Optimizing final cocktail selections...";
+};
+
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   
@@ -776,24 +786,62 @@ export default function Home() {
 
             {/* 4. Parsing / Loading State */}
             {(currentView === "parsing" || isLoadingRecommendation) && (
-              <div className="flex flex-col items-center justify-center py-12 text-center select-none">
-                <div className="w-16 h-16 border-4 border-amber-500/10 border-t-amber-500 rounded-full animate-spin mb-8"></div>
+              <div className="flex flex-col items-center justify-center py-6 text-center select-none animate-reveal">
                 
-                <h3 className="text-2xl font-serif text-amber-500 font-semibold mb-6">
+                {/* Scanner Frame */}
+                <div className="relative w-full max-w-[280px] h-[200px] rounded-3xl overflow-hidden glass-card mb-8 flex items-center justify-center shadow-lg">
+                  {/* Glowing Laser line */}
+                  <div className="laser-line" />
+
+                  {/* Menu Image Preview or Digital Placeholder */}
+                  {menuImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={menuImage}
+                      alt="Scanning menu"
+                      className="object-cover w-full h-full opacity-60 scale-105"
+                    />
+                  ) : (
+                    // Digital terminal grid placeholder for paste flow
+                    <div className="absolute inset-0 bg-zinc-950/40 flex flex-col items-center justify-center p-4">
+                      <div className="w-10 h-10 border border-dashed border-amber-500/20 rounded-full flex items-center justify-center mb-3 text-amber-500/30 animate-pulse">
+                        📝
+                      </div>
+                      <span className="text-[10px] text-zinc-500 font-mono tracking-widest uppercase">
+                        Scanning pasted text...
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Tech Grid Overlay effect */}
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(245,158,11,0.06),rgba(0,0,0,0))]" />
+                </div>
+
+                <div className="w-12 h-12 border-4 border-amber-500/10 border-t-amber-500 rounded-full animate-spin mb-6"></div>
+                
+                <h3 className="text-xl font-serif text-amber-500 font-semibold mb-4 max-w-xs leading-relaxed px-4">
                   {bartenderIsm}
                 </h3>
 
-                {/* Horizontal Progress Bar */}
-                <div className="w-64 max-w-xs flex flex-col gap-2.5 items-center">
-                  <div className="w-full bg-zinc-900 border border-zinc-850 h-2 rounded-full overflow-hidden shadow-inner">
+                {/* Progress & Console logs */}
+                <div className="w-72 max-w-xs flex flex-col gap-3 items-center px-4">
+                  <div className="w-full bg-zinc-900/60 border border-zinc-850 h-2 rounded-full overflow-hidden shadow-inner">
                     <div 
                       className="bg-gradient-to-r from-amber-600 to-amber-500 h-full rounded-full transition-all duration-300 ease-out"
                       style={{ width: `${loadingProgress}%` }}
                     />
                   </div>
-                  <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-mono">
-                    Analyzing... {Math.round(loadingProgress)}%
-                  </span>
+                  
+                  {/* Scrolling Console Log */}
+                  <div className="w-full glass-card py-2 px-3.5 rounded-xl text-left font-mono text-[9px] text-zinc-400 min-h-[48px] flex flex-col justify-center gap-1 border-zinc-850/60">
+                    <div className="text-amber-500/80 font-bold uppercase tracking-wider flex justify-between">
+                      <span>Status Terminal</span>
+                      <span className="animate-pulse">● Live</span>
+                    </div>
+                    <div className="truncate text-zinc-350">
+                      &gt; {getDiagnosticLog(loadingProgress)}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
