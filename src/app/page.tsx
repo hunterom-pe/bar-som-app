@@ -98,6 +98,8 @@ export default function Home() {
   const [activePick, setActivePick] = useState<ParsedDrink | null>(null);
   const [activeJustification, setActiveJustification] = useState("");
   const [activeCustomization, setActiveCustomization] = useState("");
+  const [isShaking, setIsShaking] = useState(false);
+  const [shakePermission, setShakePermission] = useState<boolean | null>(null);
   const [reRollCount, setReRollCount] = useState(0); // Max 2
   const [excludeIds, setExcludeIds] = useState<string[]>([]);
   const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
@@ -259,6 +261,110 @@ export default function Home() {
       };
     }
   }, [currentView, isLoadingRecommendation]);
+
+  // Check shake permission compatibility on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const DeviceMotion = (window as unknown as { DeviceMotionEvent?: unknown }).DeviceMotionEvent as unknown as {
+        requestPermission?: () => Promise<PermissionState>;
+      };
+      if (!DeviceMotion || typeof DeviceMotion.requestPermission !== "function") {
+        setShakePermission(true);
+      }
+    }
+  }, []);
+
+  const requestShakePermission = async () => {
+    if (typeof window === "undefined") return;
+    const DeviceMotion = (window as unknown as { DeviceMotionEvent?: unknown }).DeviceMotionEvent as unknown as {
+      requestPermission?: () => Promise<PermissionState>;
+    };
+
+    if (DeviceMotion && typeof DeviceMotion.requestPermission === "function") {
+      try {
+        const response = await DeviceMotion.requestPermission();
+        if (response === "granted") {
+          setShakePermission(true);
+        } else {
+          setShakePermission(false);
+        }
+      } catch (err) {
+        console.error("DeviceMotion permission request failed:", err);
+        setShakePermission(false);
+      }
+    } else {
+      setShakePermission(true);
+    }
+  };
+
+  const triggerShakeFlow = () => {
+    if (isShaking || !parsedMenu) return;
+    setIsShaking(true);
+    
+    // Animate shaker for 1.8 seconds, then trigger adventurous recommendation
+    setTimeout(async () => {
+      setIsShaking(false);
+      
+      // Select a random vibe
+      const vibes: Vibe[] = ["winding-down", "celebrating", "date-night", "one-and-done"];
+      const randomVibe = vibes[Math.floor(Math.random() * vibes.length)];
+      setVibe(randomVibe);
+      setAdventure("surprise");
+      
+      // Call recommendation API directly
+      await getRecommendation(randomVibe, "surprise");
+    }, 1800);
+  };
+
+  // DeviceMotion Accelerometer Hook for Shake Detection
+  useEffect(() => {
+    if (!parsedMenu || currentView !== "mood-questions" || isShaking || isLoadingRecommendation) return;
+
+    let lastX: number | null = null;
+    let lastY: number | null = null;
+    let lastZ: number | null = null;
+    let lastUpdate = 0;
+    const SHAKE_THRESHOLD = 15; // acceleration change threshold in m/s^2
+
+    const handleMotionEvent = (event: DeviceMotionEvent) => {
+      const acceleration = event.acceleration;
+      if (!acceleration) return;
+
+      const { x, y, z } = acceleration;
+      if (x === null || y === null || z === null) return;
+
+      const currentTime = Date.now();
+      const diffTime = currentTime - lastUpdate;
+
+      if (diffTime > 100) { // check every 100ms
+        if (lastX !== null && lastY !== null && lastZ !== null) {
+          const deltaX = Math.abs(x - lastX);
+          const deltaY = Math.abs(y - lastY);
+          const deltaZ = Math.abs(z - lastZ);
+
+          // If change on any two axes is significant, trigger shake
+          const isSignificantChange = 
+            (deltaX > SHAKE_THRESHOLD && deltaY > SHAKE_THRESHOLD) ||
+            (deltaX > SHAKE_THRESHOLD && deltaZ > SHAKE_THRESHOLD) ||
+            (deltaY > SHAKE_THRESHOLD && deltaZ > SHAKE_THRESHOLD);
+
+          if (isSignificantChange) {
+            triggerShakeFlow();
+          }
+        }
+
+        lastX = x;
+        lastY = y;
+        lastZ = z;
+        lastUpdate = currentTime;
+      }
+    };
+
+    window.addEventListener("devicemotion", handleMotionEvent);
+    return () => {
+      window.removeEventListener("devicemotion", handleMotionEvent);
+    };
+  }, [parsedMenu, currentView, isShaking, isLoadingRecommendation]);
 
   if (!mounted) {
     return (
@@ -953,6 +1059,21 @@ export default function Home() {
                   )}
                 </div>
 
+                {/* Shake Permission Prompt */}
+                {shakePermission !== true && (
+                  <button
+                    onClick={requestShakePermission}
+                    className="w-full mt-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-500 rounded-xl text-xs font-semibold tracking-wider uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    📳 Enable Shake-to-Somm
+                  </button>
+                )}
+                {shakePermission === true && (
+                  <div className="w-full mt-4 py-2.5 bg-zinc-900/40 border border-zinc-850 rounded-xl text-[10px] font-semibold tracking-wider uppercase text-zinc-400 flex items-center justify-center gap-2 select-none animate-pulse">
+                    📳 Shake phone for a surprise choice!
+                  </div>
+                )}
+
                 {/* Zero-proof Toggle */}
                 <div className="border-t border-zinc-900 pt-6 mt-6 flex justify-between items-center">
                   <label htmlFor="zero-proof-toggle" className="text-sm font-bold text-zinc-400">
@@ -1512,6 +1633,30 @@ export default function Home() {
               Close
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Full Screen Shaker Overlay */}
+      {isShaking && (
+        <div className="absolute inset-0 bg-zinc-950/90 backdrop-blur-md z-50 flex flex-col justify-center items-center select-none animate-reveal">
+          <div className="animate-shaker mb-8">
+            <svg width="100" height="120" viewBox="0 0 100 120" className="drop-shadow-[0_0_25px_rgba(245,158,11,0.4)]">
+              {/* Cap */}
+              <path d="M 40 10 Q 50 2 60 10 L 58 24 L 42 24 Z" fill="#e4e4e7" stroke="#ffffff" strokeWidth="1" strokeOpacity="0.4" />
+              {/* Strainer section */}
+              <path d="M 33 25 L 67 25 C 67 25, 63 45, 60 45 L 40 45 C 37 45, 33 25, 33 25 Z" fill="#d4d4d8" stroke="#ffffff" strokeWidth="1" strokeOpacity="0.3" />
+              {/* Main shaker cup */}
+              <path d="M 36 46 L 64 46 L 54 110 L 46 110 Z" fill="#a1a1aa" stroke="#ffffff" strokeWidth="1" strokeOpacity="0.3" />
+              {/* Metal gloss reflection */}
+              <path d="M 48 10 Q 50 8 52 10 L 52 110 L 48 110 Z" fill="#ffffff" opacity="0.2" />
+            </svg>
+          </div>
+          <h3 className="text-2xl font-serif text-amber-500 font-bold mb-2 animate-pulse">
+            Mixing It Up...
+          </h3>
+          <p className="text-zinc-400 text-xs font-mono uppercase tracking-[0.2em]">
+            Shaking the cocktails
+          </p>
         </div>
       )}
 
