@@ -807,12 +807,9 @@ export default function Home() {
                     </button>
                   </div>
 
-                  <div className="mt-8 text-zinc-400 text-xs flex items-start gap-2 max-w-[280px] text-left">
+                  <div className="mt-8 text-zinc-400 text-xs flex items-start gap-2 max-w-xs text-left">
                     <span className="leading-none mt-0.5">💡</span>
-                    <div>
-                      <div>Get the whole menu in frame</div>
-                      <div className="mt-0.5">— glare is the enemy.</div>
-                    </div>
+                    <div>Get the whole menu in frame — glare is the enemy.</div>
                   </div>
                 </div>
 
