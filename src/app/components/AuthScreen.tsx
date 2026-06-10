@@ -103,7 +103,7 @@ export default function AuthScreen({ onSuccess, onContinueOffline }: AuthScreenP
       <form onSubmit={handleAuth} className="w-full flex flex-col gap-4">
         {/* Tab Headers */}
         {firebaseEnabled && (
-          <div className="flex bg-zinc-950 border border-zinc-850 p-1 rounded-xl mb-2">
+          <div className="flex glass-card p-1 rounded-xl mb-2">
             <button
               type="button"
               onClick={() => {
@@ -112,7 +112,7 @@ export default function AuthScreen({ onSuccess, onContinueOffline }: AuthScreenP
               }}
               className={`flex-grow py-2.5 rounded-lg text-sm font-semibold transition-all ${
                 activeTab === "login"
-                  ? "bg-zinc-900 text-amber-500 border border-zinc-800 shadow-sm"
+                  ? "bg-zinc-800/60 text-amber-500 border border-zinc-800/80 shadow-sm"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
@@ -126,7 +126,7 @@ export default function AuthScreen({ onSuccess, onContinueOffline }: AuthScreenP
               }}
               className={`flex-grow py-2.5 rounded-lg text-sm font-semibold transition-all ${
                 activeTab === "signup"
-                  ? "bg-zinc-900 text-amber-500 border border-zinc-800 shadow-sm"
+                  ? "bg-zinc-800/60 text-amber-500 border border-zinc-800/80 shadow-sm"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
@@ -146,7 +146,7 @@ export default function AuthScreen({ onSuccess, onContinueOffline }: AuthScreenP
             onChange={(e) => setEmail(e.target.value)}
             disabled={!firebaseEnabled || isLoading}
             placeholder="barman@spec.com"
-            className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-500 text-sm transition-colors disabled:opacity-50"
+            className="w-full px-4 py-3 glass-card rounded-xl text-zinc-200 placeholder-zinc-650 focus:outline-none focus:border-amber-500/80 text-sm transition-all disabled:opacity-50"
             required
           />
         </div>
@@ -162,7 +162,7 @@ export default function AuthScreen({ onSuccess, onContinueOffline }: AuthScreenP
             onChange={(e) => setPassword(e.target.value)}
             disabled={!firebaseEnabled || isLoading}
             placeholder="••••••••"
-            className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-500 text-sm transition-colors disabled:opacity-50"
+            className="w-full px-4 py-3 glass-card rounded-xl text-zinc-200 placeholder-zinc-650 focus:outline-none focus:border-amber-500/80 text-sm transition-all disabled:opacity-50"
             required
           />
         </div>
@@ -179,7 +179,7 @@ export default function AuthScreen({ onSuccess, onContinueOffline }: AuthScreenP
               onChange={(e) => setConfirmPassword(e.target.value)}
               disabled={isLoading}
               placeholder="••••••••"
-              className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-500 text-sm transition-colors disabled:opacity-50"
+              className="w-full px-4 py-3 glass-card rounded-xl text-zinc-200 placeholder-zinc-650 focus:outline-none focus:border-amber-500/80 text-sm transition-all disabled:opacity-50"
               required
             />
           </div>
@@ -218,7 +218,7 @@ export default function AuthScreen({ onSuccess, onContinueOffline }: AuthScreenP
 
         <button
           onClick={onContinueOffline}
-          className="w-full py-3 bg-zinc-950 hover:bg-zinc-900 border border-zinc-850 text-zinc-400 hover:text-zinc-200 font-semibold rounded-xl text-sm transition-colors"
+          className="w-full py-3 glass-card text-zinc-300 hover:text-zinc-100 font-semibold rounded-xl text-sm transition-all cursor-pointer"
         >
           {firebaseEnabled ? "Continue Offline (Demo)" : "Continue Offline"}
         </button>

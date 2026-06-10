@@ -52,7 +52,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
         </h1>
 
         {/* Tagline */}
-        <p className="text-zinc-500 text-xs font-sans font-semibold uppercase tracking-[0.2em] leading-relaxed max-w-[240px]">
+        <p className="text-zinc-400 text-xs font-sans font-semibold uppercase tracking-[0.2em] leading-relaxed max-w-[240px]">
           Your Personal Cocktail Sommelier
         </p>
 

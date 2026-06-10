@@ -535,7 +535,7 @@ export default function Home() {
 
   // Main viewport container render
   return (
-    <div className="w-full max-w-md mx-auto flex-grow flex flex-col bg-zinc-950 shadow-2xl relative min-h-screen px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+5rem)] border-x border-zinc-900">
+    <div className="w-full max-w-md mx-auto h-[100dvh] flex flex-col bg-zinc-950 shadow-2xl relative px-6 pt-[calc(env(safe-area-inset-top)+1.25rem)] pb-0 border-x border-zinc-900 overflow-hidden">
       
       {/* Age Gate Interstitial */}
       {!ageGateCompleted && (
@@ -636,7 +636,7 @@ export default function Home() {
           )}
 
           {/* Main View Area */}
-          <main className="flex-grow flex flex-col justify-center">
+          <main className="flex-grow flex flex-col justify-center min-h-0 overflow-y-auto pb-4">
             
             {/* Error Notice */}
             {apiError && (
@@ -701,7 +701,7 @@ export default function Home() {
                         <button
                           key={idx}
                           onClick={() => setActiveHistoryDrink(item)}
-                          className="flex-shrink-0 bg-zinc-900 border border-zinc-850 px-3.5 py-2 rounded-xl text-xs text-left cursor-pointer hover:bg-zinc-850 transition-colors"
+                          className="flex-shrink-0 glass-card px-3.5 py-2 rounded-xl text-xs text-left cursor-pointer hover:bg-zinc-800/60 transition-colors"
                         >
                           <div className="font-semibold text-zinc-300">{item.drinkName}</div>
                           <div className="text-zinc-400 font-mono capitalize text-[10px] mt-0.5">{item.styleFamily}</div>
@@ -933,7 +933,7 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <div className="bg-zinc-900 border border-zinc-850 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                    <div className="glass-card glow-accent rounded-3xl p-6 relative overflow-hidden">
                       <div className="absolute top-6 right-6 flex items-center gap-2">
                         <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2.5 py-1 rounded-full text-xs font-mono font-bold capitalize">
                           {activePick.styleFamily}
@@ -960,7 +960,7 @@ export default function Home() {
                       )}
 
                       {/* Justification Box */}
-                      <blockquote className="bg-zinc-950 border-l-4 border-amber-500 p-4 rounded-r-2xl mb-6">
+                      <blockquote className="bg-zinc-950/60 border-l-4 border-amber-500 p-4 rounded-r-2xl mb-6">
                         <p className="text-zinc-200 text-sm font-medium leading-relaxed italic">
                           &ldquo;{activeJustification}&rdquo;
                         </p>
@@ -973,7 +973,7 @@ export default function Home() {
                         </h3>
                         <div className="flex flex-wrap gap-1.5">
                           {activePick.ingredients.map((ing, idx) => (
-                            <span key={idx} className="bg-zinc-950 text-zinc-400 border border-zinc-850 px-2.5 py-1 rounded-lg text-xs">
+                            <span key={idx} className="bg-zinc-950/50 text-zinc-300 border border-zinc-850/60 px-2.5 py-1 rounded-lg text-xs">
                               {ing}
                             </span>
                           ))}
@@ -1066,19 +1066,19 @@ export default function Home() {
                     <div className="space-y-3">
                       <button
                         onClick={() => handleRateDrink("loved")}
-                        className="w-full py-4 bg-zinc-900 hover:bg-zinc-850 hover:border-green-500/40 border border-zinc-800 text-zinc-200 font-bold rounded-2xl text-base transition-all active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
+                        className="w-full py-4 glass-card hover:border-green-500/40 text-zinc-200 font-bold rounded-2xl text-base transition-all active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
                       >
                         <span className="text-lg">😍</span> Loved it!
                       </button>
                       <button
                         onClick={() => handleRateDrink("fine")}
-                        className="w-full py-4 bg-zinc-900 hover:bg-zinc-850 hover:border-amber-500/40 border border-zinc-800 text-zinc-200 font-bold rounded-2xl text-base transition-all active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
+                        className="w-full py-4 glass-card hover:border-amber-500/40 text-zinc-200 font-bold rounded-2xl text-base transition-all active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
                       >
                         <span className="text-lg">😐</span> It was fine
                       </button>
                       <button
                         onClick={() => handleRateDrink("nope")}
-                        className="w-full py-4 bg-zinc-900 hover:bg-zinc-850 hover:border-red-500/40 border border-zinc-800 text-zinc-200 font-bold rounded-2xl text-base transition-all active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
+                        className="w-full py-4 glass-card hover:border-red-500/40 text-zinc-200 font-bold rounded-2xl text-base transition-all active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
                       >
                         <span className="text-lg">👎</span> Not for me
                       </button>
@@ -1094,7 +1094,7 @@ export default function Home() {
                 <h2 className="text-2xl font-bold font-serif mb-4 text-amber-500">Your Palate</h2>
 
                 {/* Radar Chart */}
-                <div className="bg-zinc-900/60 border border-zinc-850 rounded-3xl p-4 mb-6 shadow-md">
+                <div className="glass-card rounded-3xl p-4 mb-6">
                   <PalateChart affinities={profile.affinities} />
                   
                   <div className="flex justify-around items-center border-t border-zinc-850 pt-4 mt-2">
@@ -1184,10 +1184,10 @@ export default function Home() {
               <div className="flex flex-col flex-grow animate-reveal">
                 <h2 className="text-2xl font-bold font-serif mb-4 text-amber-500">Favorite Drinks</h2>
                 {favorites.length === 0 ? (
-                  <div className="flex-grow flex flex-col justify-center items-center text-center p-6 border border-dashed border-zinc-850 rounded-3xl text-zinc-500 my-4 select-none">
+                  <div className="flex-grow flex flex-col justify-center items-center text-center p-6 border border-dashed border-zinc-800 glass-card rounded-3xl text-zinc-400 my-4 select-none">
                     <span className="text-5xl mb-4">⭐</span>
                     <h3 className="text-lg font-bold font-serif text-zinc-300 mb-2">No Favorites Yet</h3>
-                    <p className="text-zinc-500 text-xs max-w-[240px] leading-relaxed mb-6">
+                    <p className="text-zinc-400 text-xs max-w-[240px] leading-relaxed mb-6">
                       Scan a menu and star your preferred drinks to save them here!
                     </p>
                     <button
@@ -1198,9 +1198,9 @@ export default function Home() {
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-3 overflow-y-auto max-h-[60vh] pb-8 pr-1">
+                  <div className="space-y-3 pb-8 pr-1">
                     {favorites.map((drink, idx) => (
-                      <div key={idx} className="bg-zinc-900 border border-zinc-850 p-5 rounded-2xl relative shadow-md">
+                      <div key={idx} className="glass-card p-5 rounded-2xl relative">
                         <div className="absolute top-4 right-4 flex items-center gap-2">
                           <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold capitalize">
                             {drink.styleFamily}
@@ -1238,10 +1238,10 @@ export default function Home() {
               <div className="flex flex-col flex-grow animate-reveal">
                 <h2 className="text-2xl font-bold font-serif mb-4 text-amber-500">Scanned Menus</h2>
                 {menuSearches.length === 0 ? (
-                  <div className="flex-grow flex flex-col justify-center items-center text-center p-6 border border-dashed border-zinc-850 rounded-3xl text-zinc-500 my-4 select-none">
+                  <div className="flex-grow flex flex-col justify-center items-center text-center p-6 border border-dashed border-zinc-800 glass-card rounded-3xl text-zinc-400 my-4 select-none">
                     <span className="text-5xl mb-4">📜</span>
                     <h3 className="text-lg font-bold font-serif text-zinc-300 mb-2">No Saved Menus</h3>
-                    <p className="text-zinc-500 text-xs max-w-[240px] leading-relaxed mb-6">
+                    <p className="text-zinc-400 text-xs max-w-[240px] leading-relaxed mb-6">
                       Scan or paste menus and they will be saved here so you can re-open them later.
                     </p>
                     <button
@@ -1252,9 +1252,9 @@ export default function Home() {
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-3 overflow-y-auto max-h-[60vh] pb-8 pr-1">
+                  <div className="space-y-3 pb-8 pr-1">
                     {menuSearches.map((search, idx) => (
-                      <div key={idx} className="bg-zinc-900 border border-zinc-850 p-4 rounded-2xl shadow-md flex justify-between items-center">
+                      <div key={idx} className="glass-card p-4 rounded-2xl flex justify-between items-center">
                         <div className="pr-4">
                           <h3 className="text-sm font-bold font-serif text-zinc-200 mb-0.5">{search.barName}</h3>
                           <div className="text-zinc-500 font-mono text-[10px] uppercase tracking-wider mb-1">
@@ -1297,7 +1297,7 @@ export default function Home() {
 
           {/* Bottom Navigation Bar */}
           {currentView !== "parsing" && !isLoadingRecommendation && (
-            <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-zinc-950/90 backdrop-blur-md border-t border-zinc-900 py-3 px-6 flex justify-around items-center z-40 select-none">
+            <nav className="w-full bg-zinc-950/90 backdrop-blur-md border-t border-zinc-900 py-3 flex justify-around items-center z-40 select-none mt-auto -mx-6 px-6 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
               <button
                 onClick={() => {
                   resetStateToLanding();
