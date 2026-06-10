@@ -50,20 +50,20 @@ export const GEMINI_RESPONSE_SCHEMA = {
     },
     drinks: {
       type: "ARRAY",
-      description: "List of all parsed cocktails from the menu.",
+      description: "List of all parsed items/drinks from the menu.",
       items: {
         type: "OBJECT",
         properties: {
           id: { type: "STRING", description: "Unique generated short id, e.g. of, margarita-1, etc." },
-          name: { type: "STRING", description: "Name of the cocktail." },
-          description: { type: "STRING", description: "The description of the drink as printed on the menu." },
-          price: { type: "STRING", description: "The price of the drink, e.g. '14', '$16.50', '15'." },
+          name: { type: "STRING", description: "Name of the item." },
+          description: { type: "STRING", description: "The description of the item as printed on the menu." },
+          price: { type: "STRING", description: "The price of the item, e.g. '14', '$16.50', '15'." },
           ingredients: { type: "ARRAY", items: { type: "STRING" }, description: "Best effort list of ingredients." },
-          baseSpirits: { type: "ARRAY", items: { type: "STRING" }, description: "Base spirits, e.g. ['mezcal', 'tequila'], ['gin']." },
+          baseSpirits: { type: "ARRAY", items: { type: "STRING" }, description: "Base spirits or key components, e.g. ['mezcal', 'tequila'], ['gin']." },
           styleFamily: {
             type: "STRING",
             enum: ["old-fashioned", "martini", "sour", "highball", "tiki", "negroni", "spritz", "flip-or-cream", "hot", "shot", "other"],
-            description: "The primary style family this drink belongs to."
+            description: "The primary style family this drink belongs to (use 'other' if not a standard cocktail style)."
           },
           flavorVector: {
             type: "OBJECT",
@@ -85,9 +85,9 @@ export const GEMINI_RESPONSE_SCHEMA = {
           abvCategory: {
             type: "STRING",
             enum: ["low", "standard", "strong", "zero"],
-            description: "ABV category: zero for non-alcoholic, low for vermouth/sherry-based (e.g. spritz), standard for typical drinks (1.5-2oz base spirits), strong for heavy hitters (e.g. Old Fashioned, Negroni)."
+            description: "ABV category: zero for non-alcoholic/food, low for vermouth/sherry-based (e.g. spritz), standard for typical drinks (1.5-2oz base spirits), strong for heavy hitters (e.g. Old Fashioned, Negroni)."
           },
-          confidence: { type: "NUMBER", description: "Confidence score 0.0 to 1.0 that this is a valid cocktail and not a food/wine/beer item." }
+          confidence: { type: "NUMBER", description: "Confidence score 0.0 to 1.0 that this is a valid menu item." }
         },
         required: ["id", "name", "ingredients", "baseSpirits", "styleFamily", "flavorVector", "abvCategory", "confidence"]
       }

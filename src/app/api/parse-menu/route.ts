@@ -64,14 +64,14 @@ export async function POST(request: NextRequest) {
           }
         },
         {
-          text: "Parse this cocktail menu image. Extract every cocktail into the response schema. Ignore non-cocktail sections (like beer, wine, food, appetizers, entrees). For each cocktail: generate a short unique ID, identify base spirits, assign a mixology style family, score flavor dimensions 0-10 based on standard mixology profiles, and categorize the ABV."
+          text: "Parse this menu image. Extract every menu item and drink into the response schema. For each item: generate a short unique ID, identify base ingredients/spirits, assign a style family (or 'other'), score flavor dimensions 0-10 based on its profile, and categorize the ABV."
         }
       ];
     } else {
       // Raw text fallback flow
       contents = [
         {
-          text: `Parse this cocktail menu text. Extract every cocktail into the response schema. Ignore non-cocktail sections (like beer, wine, food). For each cocktail: generate a short unique ID, identify base spirits, assign a mixology style family, score flavor dimensions 0-10 based on standard mixology profiles, and categorize the ABV.
+          text: `Parse this menu text. Extract every menu item and drink into the response schema. For each item: generate a short unique ID, identify base ingredients/spirits, assign a style family (or 'other'), score flavor dimensions 0-10 based on its profile, and categorize the ABV.
           
           Menu text:
           ${text}`
