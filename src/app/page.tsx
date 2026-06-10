@@ -9,6 +9,7 @@ import { PalateChart } from "@/components/PalateChart";
 import { compressImage } from "@/lib/image";
 import SplashScreen from "@/app/components/SplashScreen";
 import AuthScreen from "@/app/components/AuthScreen";
+import CocktailVisualizer from "@/app/components/CocktailVisualizer";
 
 const BARTENDER_ISMS = [
   "Stirring up the algorithms...",
@@ -934,30 +935,35 @@ export default function Home() {
                     </div>
 
                     <div className="glass-card glow-accent rounded-3xl p-6 relative overflow-hidden">
-                      <div className="absolute top-6 right-6 flex items-center gap-2">
-                        <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2.5 py-1 rounded-full text-xs font-mono font-bold capitalize">
-                          {activePick.styleFamily}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between items-start mb-2 pr-20">
-                        <h2 className="text-3xl font-extrabold font-serif tracking-tight text-zinc-100 pr-2">
-                          {activePick.name}
-                        </h2>
-                        <button
-                          onClick={() => handleToggleFavorite(activePick)}
-                          className="text-2xl text-amber-500 p-1 hover:scale-110 active:scale-95 transition-all focus:outline-none cursor-pointer leading-none"
-                          aria-label={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
-                        >
-                          {isFavorited ? "★" : "☆"}
-                        </button>
-                      </div>
-
-                      {activePick.price && (
-                        <div className="text-amber-500 font-mono font-bold text-lg mb-4">
-                          {activePick.price}
+                      <div className="flex justify-between items-center mb-6">
+                        <div className="flex-grow pr-2">
+                          <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2.5 py-1 rounded-full text-xs font-mono font-bold capitalize inline-block mb-3">
+                            {activePick.styleFamily}
+                          </span>
+                          <div className="flex items-start gap-1 pr-2">
+                            <h2 className="text-2xl font-extrabold font-serif tracking-tight text-zinc-100 leading-tight">
+                              {activePick.name}
+                            </h2>
+                            <button
+                              onClick={() => handleToggleFavorite(activePick)}
+                              className="text-2xl text-amber-500 p-1 hover:scale-110 active:scale-95 transition-all focus:outline-none cursor-pointer leading-none mt-0.5"
+                              aria-label={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+                            >
+                              {isFavorited ? "★" : "☆"}
+                            </button>
+                          </div>
+                          {activePick.price && (
+                            <div className="text-amber-500 font-mono font-bold text-base mt-2">
+                              {activePick.price}
+                            </div>
+                          )}
                         </div>
-                      )}
+                        <CocktailVisualizer
+                          styleFamily={activePick.styleFamily}
+                          name={activePick.name}
+                          className="shrink-0"
+                        />
+                      </div>
 
                       {/* Justification Box */}
                       <blockquote className="bg-zinc-950/60 border-l-4 border-amber-500 p-4 rounded-r-2xl mb-6">
@@ -1361,7 +1367,7 @@ export default function Home() {
       {/* History Drink Modal */}
       {activeHistoryDrink && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-6 select-none animate-reveal">
-          <div className="bg-zinc-900 border border-zinc-850 rounded-3xl p-6 max-w-sm w-full relative shadow-2xl">
+          <div className="glass-card rounded-3xl p-6 max-w-sm w-full relative shadow-2xl">
             <button
               onClick={() => setActiveHistoryDrink(null)}
               className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-200 text-lg p-2 leading-none focus:outline-none cursor-pointer"
@@ -1370,28 +1376,37 @@ export default function Home() {
               ✕
             </button>
 
-            <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest font-mono">
-              Drink Profile
-            </span>
-            <div className="flex justify-between items-start mt-2 mb-1 pr-8">
-              <h3 className="text-2xl font-extrabold font-serif text-zinc-100 pr-2">
-                {activeHistoryDrink.drinkName}
-              </h3>
-              <button
-                onClick={() => handleToggleHistoryFavorite(activeHistoryDrink)}
-                className="text-2xl text-amber-500 p-1 hover:scale-110 active:scale-95 transition-all focus:outline-none cursor-pointer leading-none shrink-0"
-                aria-label={favorites.some(f => f.name.toLowerCase() === activeHistoryDrink.drinkName.toLowerCase()) ? "Remove from Favorites" : "Add to Favorites"}
-              >
-                {favorites.some(f => f.name.toLowerCase() === activeHistoryDrink.drinkName.toLowerCase()) ? "★" : "☆"}
-              </button>
-            </div>
-            <div className="flex items-center gap-2 mb-6">
-              <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold capitalize">
-                {activeHistoryDrink.styleFamily}
-              </span>
-              <span className="text-zinc-550 text-[10px] font-mono font-semibold uppercase tracking-wider">
-                Tried on {activeHistoryDrink.vibe.replace("-", " ")}
-              </span>
+            <div className="flex justify-between items-center mb-6 pr-4">
+              <div className="flex-grow pr-2">
+                <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest font-mono">
+                  Drink Profile
+                </span>
+                <div className="flex items-start gap-1 mt-1 pr-2">
+                  <h3 className="text-xl font-extrabold font-serif text-zinc-100 leading-tight">
+                    {activeHistoryDrink.drinkName}
+                  </h3>
+                  <button
+                    onClick={() => handleToggleHistoryFavorite(activeHistoryDrink)}
+                    className="text-2xl text-amber-500 p-1 hover:scale-110 active:scale-95 transition-all focus:outline-none cursor-pointer leading-none shrink-0"
+                    aria-label={favorites.some(f => f.name.toLowerCase() === activeHistoryDrink.drinkName.toLowerCase()) ? "Remove from Favorites" : "Add to Favorites"}
+                  >
+                    {favorites.some(f => f.name.toLowerCase() === activeHistoryDrink.drinkName.toLowerCase()) ? "★" : "☆"}
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold capitalize">
+                    {activeHistoryDrink.styleFamily}
+                  </span>
+                  <span className="text-zinc-400 text-[9px] font-mono font-semibold uppercase tracking-wider">
+                    Tried on {activeHistoryDrink.vibe.replace("-", " ")}
+                  </span>
+                </div>
+              </div>
+              <CocktailVisualizer
+                styleFamily={activeHistoryDrink.styleFamily}
+                name={activeHistoryDrink.drinkName}
+                className="shrink-0"
+              />
             </div>
 
             {/* Flavor Vector Breakdown */}
