@@ -722,7 +722,7 @@ export default function Home() {
                   {bartenderIsm}
                 </h3>
                 <p className="text-zinc-400 text-sm max-w-xs italic animate-pulse">
-                  This usually takes 4-6 seconds.
+                  This usually takes 8-12 seconds.
                 </p>
               </div>
             )}
