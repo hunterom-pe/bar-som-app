@@ -486,6 +486,26 @@ export default function Home() {
     }
   };
 
+  const handleToggleHistoryFavorite = async (item: DrinkRating) => {
+    const existing = favorites.find(f => f.name.toLowerCase() === item.drinkName.toLowerCase());
+    let drinkToToggle: ParsedDrink;
+    if (existing) {
+      drinkToToggle = existing;
+    } else {
+      drinkToToggle = {
+        id: encodeURIComponent(item.drinkName.toLowerCase()),
+        name: item.drinkName,
+        styleFamily: item.styleFamily,
+        flavorVector: item.flavorVector,
+        ingredients: [],
+        baseSpirits: [],
+        abvCategory: "standard",
+        confidence: 1.0
+      };
+    }
+    await handleToggleFavorite(drinkToToggle);
+  };
+
   const resetStateToLanding = () => {
     setMenuText("");
     setMenuImage(null);
@@ -1351,11 +1371,20 @@ export default function Home() {
             </button>
 
             <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest font-mono">
-              Favorite Drink Profile
+              Drink Profile
             </span>
-            <h3 className="text-2xl font-extrabold font-serif text-zinc-100 mt-2 mb-1">
-              {activeHistoryDrink.drinkName}
-            </h3>
+            <div className="flex justify-between items-start mt-2 mb-1 pr-8">
+              <h3 className="text-2xl font-extrabold font-serif text-zinc-100 pr-2">
+                {activeHistoryDrink.drinkName}
+              </h3>
+              <button
+                onClick={() => handleToggleHistoryFavorite(activeHistoryDrink)}
+                className="text-2xl text-amber-500 p-1 hover:scale-110 active:scale-95 transition-all focus:outline-none cursor-pointer leading-none shrink-0"
+                aria-label={favorites.some(f => f.name.toLowerCase() === activeHistoryDrink.drinkName.toLowerCase()) ? "Remove from Favorites" : "Add to Favorites"}
+              >
+                {favorites.some(f => f.name.toLowerCase() === activeHistoryDrink.drinkName.toLowerCase()) ? "★" : "☆"}
+              </button>
+            </div>
             <div className="flex items-center gap-2 mb-6">
               <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold capitalize">
                 {activeHistoryDrink.styleFamily}
