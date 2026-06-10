@@ -690,6 +690,11 @@ export default function Home() {
                     </div>
                   </div>
                 )}
+
+                {/* Subtle Legal Disclaimer */}
+                <div className="text-center text-[10px] text-zinc-500 font-medium tracking-wide mt-8 select-none">
+                  Drink responsibly. Must be of legal drinking age.
+                </div>
               </div>
             )}
 
@@ -1145,6 +1150,11 @@ export default function Home() {
                   >
                     Reset My Palate
                   </button>
+
+                  {/* Subtle Legal Disclaimer */}
+                  <div className="text-center text-[10px] text-zinc-500 font-medium tracking-wide mt-6 select-none">
+                    Drink responsibly. Must be of legal drinking age.
+                  </div>
                 </div>
               </div>
             )}
@@ -1264,13 +1274,6 @@ export default function Home() {
             )}
 
           </main>
-
-          {/* Persistent Legal Footer */}
-          {currentView !== "parsing" && !isLoadingRecommendation && (
-            <footer className="mt-8 pt-4 border-t border-zinc-900 text-center text-[10px] text-zinc-400 font-medium tracking-wide select-none">
-              Drink responsibly. Must be of legal drinking age.
-            </footer>
-          )}
 
           {/* Bottom Navigation Bar */}
           {currentView !== "parsing" && !isLoadingRecommendation && (
