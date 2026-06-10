@@ -120,10 +120,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(validationResult.data, { headers: corsHeaders });
   } catch (error: unknown) {
     console.error("Error in /api/parse-menu:", error);
-    const errorMessage = error instanceof Error ? error.message : "An error occurred while parsing the menu.";
+    let errorMessage = error instanceof Error ? error.message : "An error occurred while parsing the menu.";
+    let statusCode = 500;
+
+    if (
+      errorMessage.includes("429") ||
+      errorMessage.includes("RESOURCE_EXHAUSTED") ||
+      errorMessage.includes("quota")
+    ) {
+      errorMessage = "Gemini API rate limit exceeded (Free Tier allows 2 requests per minute). Please wait 30-60 seconds and try again.";
+      statusCode = 429;
+    }
+
     return NextResponse.json(
       { error: errorMessage },
-      { status: 500, headers: corsHeaders }
+      { status: statusCode, headers: corsHeaders }
     );
   }
 }

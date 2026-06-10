@@ -476,7 +476,7 @@ export default function Home() {
               value={menuText}
               onChange={(e) => setMenuText(e.target.value)}
               placeholder="Example:&#10;Old Fashioned - Bourbon, Angostura, Sugar $14&#10;Paper Plane - Bourbon, Aperol, Amaro, Lemon $15"
-              className="flex-grow w-full min-h-[200px] p-4 bg-zinc-900 border border-zinc-800 rounded-2xl text-zinc-200 placeholder-zinc-650 focus:outline-none focus:border-amber-500 text-sm font-mono leading-relaxed mb-6"
+              className="flex-grow w-full min-h-[200px] p-4 bg-zinc-900 border border-zinc-800 rounded-2xl text-zinc-200 placeholder-zinc-650 focus:outline-none focus:border-amber-500 text-base font-mono leading-relaxed mb-6"
             />
 
             <button
