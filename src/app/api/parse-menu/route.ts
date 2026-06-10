@@ -79,14 +79,37 @@ export async function POST(request: NextRequest) {
       ];
     }
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
-      contents,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: GEMINI_RESPONSE_SCHEMA
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: "gemini-2.5-pro",
+        contents,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: GEMINI_RESPONSE_SCHEMA
+        }
+      });
+    } catch (err: any) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (
+        errMsg.includes("429") ||
+        errMsg.includes("RESOURCE_EXHAUSTED") ||
+        errMsg.includes("quota") ||
+        errMsg.includes("limit")
+      ) {
+        console.warn("gemini-2.5-pro rate limited or disabled. Falling back to gemini-2.5-flash...");
+        response = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: GEMINI_RESPONSE_SCHEMA
+          }
+        });
+      } else {
+        throw err;
       }
-    });
+    }
 
     const responseText = response.text;
     if (!responseText) {
