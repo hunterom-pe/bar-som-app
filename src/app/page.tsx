@@ -18,7 +18,10 @@ const BARTENDER_ISMS = [
 ];
 
 const getApiUrl = (path: string): string => {
-  if (typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.()) {
+  if (
+    typeof window !== "undefined" &&
+    (window as Window & { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
+  ) {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://bar-som-app.netlify.app";
     return `${baseUrl}${path}`;
   }
