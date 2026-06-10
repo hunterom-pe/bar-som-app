@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
           responseSchema: GEMINI_RESPONSE_SCHEMA
         }
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn("gemini-2.5-pro failed or is unavailable. Falling back to gemini-2.5-flash...", err);
       response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
