@@ -1,6 +1,6 @@
 import { DrinkRating, FlavorDimension, TasteProfile } from "./types";
 
-const LOCAL_STORAGE_KEY = "bar_sommelier_profile_v1";
+const LOCAL_STORAGE_KEY = "spec_profile_v1";
 
 const DEFAULT_AFFINITIES: Record<FlavorDimension, number> = {
   boozy: 5,

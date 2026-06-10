@@ -13,13 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bar Sommelier",
-  description: "A personal mixology concierge in your pocket. Recommends exactly one perfect drink from any menu.",
+  title: "Spec — Your Personal Cocktail Sommelier",
+  description: "Your personal cocktail sommelier in your pocket. Recommends exactly one perfect drink from any menu.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Bar Sommelier",
+    title: "Spec",
   },
   icons: {
     icon: "/icons/icon-192x192.png",

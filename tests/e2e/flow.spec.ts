@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { injectAxe, checkA11y } from "axe-playwright";
 
-test.describe("Bar Sommelier E2E & Accessibility Flow", () => {
+test.describe("Spec E2E & Accessibility Flow", () => {
   test.beforeEach(async ({ page }) => {
     // 1. Mock /api/parse-menu
     await page.route("**/api/parse-menu", async (route) => {
@@ -159,7 +159,7 @@ test.describe("Bar Sommelier E2E & Accessibility Flow", () => {
     await expect(page.locator("text=Drinks Rated")).toBeVisible();
     
     // Verify local storage was updated
-    const profileData = await page.evaluate(() => localStorage.getItem("bar_sommelier_profile_v1"));
+    const profileData = await page.evaluate(() => localStorage.getItem("spec_profile_v1"));
     expect(profileData).not.toBeNull();
     const parsedProfile = JSON.parse(profileData!);
     expect(parsedProfile.ratingsCount).toBe(1);

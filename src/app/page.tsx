@@ -81,7 +81,7 @@ export default function Home() {
     const timer = setTimeout(() => {
       setMounted(true);
       // Load age gate
-      const gate = localStorage.getItem("bar_sommelier_age_gate");
+      const gate = localStorage.getItem("spec_age_gate");
       setAgeGateCompleted(gate === "true");
       // Load profile
       setProfile(ProfileStore.getProfile());
@@ -120,7 +120,7 @@ export default function Home() {
   // Age Gate actions
   const handleAgeGate = (approved: boolean) => {
     if (approved) {
-      localStorage.setItem("bar_sommelier_age_gate", "true");
+      localStorage.setItem("spec_age_gate", "true");
       setAgeGateCompleted(true);
     } else {
       setAgeGateError(true);
@@ -324,10 +324,10 @@ export default function Home() {
               <span className="text-2xl text-amber-500 font-serif">🥂</span>
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-amber-500 font-serif mb-4">
-              BAR SOMMELIER
+              SPEC
             </h1>
             <p className="text-zinc-400 text-lg max-w-xs mb-8">
-              A personal mixology concierge. Are you of legal drinking age?
+              Your personal cocktail sommelier. Are you of legal drinking age?
             </p>
 
             {ageGateError ? (
@@ -368,7 +368,7 @@ export default function Home() {
               onClick={resetStateToLanding}
               className="text-xl font-bold text-amber-500 font-serif tracking-wide active:opacity-70 cursor-pointer"
             >
-              BAR SOMMELIER
+              SPEC
             </button>
           </h1>
           {currentView === "landing" && (

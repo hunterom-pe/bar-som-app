@@ -1,6 +1,6 @@
 {
   "appId": "com.barsommelier.app",
-  "appName": "Bar Sommelier",
+  "appName": "Spec",
   "webDir": "out",
   "server": {
     "androidScheme": "https"
