@@ -16,6 +16,19 @@ function getAiClient() {
   return aiClient;
 }
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -24,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (!menu || !vibe || !adventure || !profile) {
       return NextResponse.json(
         { error: "Missing required fields (menu, vibe, adventure, profile)." },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -44,7 +57,7 @@ export async function POST(request: NextRequest) {
         justification: "",
         runnerUp: null,
         runnerUpJustification: ""
-      });
+      }, { headers: corsHeaders });
     }
 
     // 2. Call Gemini for justifications
@@ -137,13 +150,13 @@ Please generate justifications for the pick and the runner-up.
       justification: pickJustification,
       runnerUp,
       runnerUpJustification
-    });
+    }, { headers: corsHeaders });
   } catch (error: unknown) {
     console.error("Error in /api/recommend:", error);
     const errorMessage = error instanceof Error ? error.message : "An error occurred while generating recommendation.";
     return NextResponse.json(
       { error: errorMessage },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }

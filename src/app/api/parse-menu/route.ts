@@ -16,6 +16,19 @@ function getAiClient() {
   return aiClient;
 }
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -24,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (!image && !text) {
       return NextResponse.json(
         { error: "Either image (base64) or text must be provided." },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -79,7 +92,7 @@ export async function POST(request: NextRequest) {
     if (!responseText) {
       return NextResponse.json(
         { error: "Couldn't read that menu — try the paste option?" },
-        { status: 422 }
+        { status: 422, headers: corsHeaders }
       );
     }
 
@@ -90,7 +103,7 @@ export async function POST(request: NextRequest) {
       console.error("Failed to parse Gemini response as JSON:", responseText, err);
       return NextResponse.json(
         { error: "Couldn't read that menu — try the paste option?" },
-        { status: 422 }
+        { status: 422, headers: corsHeaders }
       );
     }
 
@@ -100,17 +113,17 @@ export async function POST(request: NextRequest) {
       console.error("Zod Validation failure on Gemini response:", validationResult.error.format());
       return NextResponse.json(
         { error: "Couldn't read that menu — try the paste option?" },
-        { status: 422 }
+        { status: 422, headers: corsHeaders }
       );
     }
 
-    return NextResponse.json(validationResult.data);
+    return NextResponse.json(validationResult.data, { headers: corsHeaders });
   } catch (error: unknown) {
     console.error("Error in /api/parse-menu:", error);
     const errorMessage = error instanceof Error ? error.message : "An error occurred while parsing the menu.";
     return NextResponse.json(
       { error: errorMessage },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
