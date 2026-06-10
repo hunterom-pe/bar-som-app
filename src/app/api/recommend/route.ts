@@ -125,28 +125,18 @@ Please generate justifications for the pick and the runner-up.
         }
       });
     } catch (err: any) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      if (
-        errMsg.includes("429") ||
-        errMsg.includes("RESOURCE_EXHAUSTED") ||
-        errMsg.includes("quota") ||
-        errMsg.includes("limit")
-      ) {
-        console.warn("gemini-2.5-pro rate limited or disabled. Falling back to gemini-2.5-flash...");
-        response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: [
-            { text: promptText }
-          ],
-          config: {
-            systemInstruction,
-            responseMimeType: "application/json",
-            responseSchema: schema
-          }
-        });
-      } else {
-        throw err;
-      }
+      console.warn("gemini-2.5-pro failed or is unavailable. Falling back to gemini-2.5-flash...", err);
+      response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          { text: promptText }
+        ],
+        config: {
+          systemInstruction,
+          responseMimeType: "application/json",
+          responseSchema: schema
+        }
+      });
     }
 
     const responseText = response.text;
@@ -189,6 +179,13 @@ Please generate justifications for the pick and the runner-up.
     ) {
       errorMessage = "Gemini API rate limit exceeded. Please wait 30-60 seconds and try again.";
       statusCode = 429;
+    } else if (
+      errorMessage.includes("503") ||
+      errorMessage.includes("UNAVAILABLE") ||
+      errorMessage.includes("demand")
+    ) {
+      errorMessage = "Gemini API is currently experiencing high demand. Please try again in a few moments.";
+      statusCode = 503;
     }
 
     return NextResponse.json(
