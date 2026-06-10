@@ -51,3 +51,12 @@ export interface DrinkRating {
 
 export type Vibe = "winding-down" | "celebrating" | "date-night" | "one-and-done";
 export type Adventure = "safe" | "surprise" | "new-territory";
+
+export interface MenuSearch {
+  id: string;
+  barName: string;
+  menuText: string;
+  imageBase64: string | null;
+  drinks: ParsedDrink[];
+  timestamp: string;
+}
