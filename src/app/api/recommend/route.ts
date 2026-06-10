@@ -161,7 +161,7 @@ Please generate justifications for the pick and the runner-up.
       errorMessage.includes("RESOURCE_EXHAUSTED") ||
       errorMessage.includes("quota")
     ) {
-      errorMessage = "Gemini API rate limit exceeded (Free Tier allows 2 requests per minute). Please wait 30-60 seconds and try again.";
+      errorMessage = "Gemini API rate limit exceeded. Please wait 30-60 seconds and try again.";
       statusCode = 429;
     }
 
