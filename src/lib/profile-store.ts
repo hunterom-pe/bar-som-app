@@ -9,7 +9,9 @@ import {
   getDocs, 
   query, 
   orderBy, 
-  deleteDoc 
+  deleteDoc,
+  QueryDocumentSnapshot,
+  DocumentData
 } from "firebase/firestore";
 
 const LOCAL_STORAGE_KEY = "spec_profile_v1";
@@ -357,7 +359,7 @@ export const CloudProfileStore = {
       const searchesRef = collection(db, "users", uid, "searches");
       const q = query(searchesRef, orderBy("timestamp", "desc"));
       const querySnap = await getDocs(q);
-      return querySnap.docs.map(doc => {
+      return querySnap.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -405,7 +407,7 @@ export const CloudProfileStore = {
       const favsRef = collection(db, "users", uid, "favorites");
       const q = query(favsRef, orderBy("addedAt", "desc"));
       const querySnap = await getDocs(q);
-      return querySnap.docs.map(doc => {
+      return querySnap.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
         const data = doc.data();
         return {
           id: data.id,

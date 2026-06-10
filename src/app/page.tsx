@@ -53,6 +53,7 @@ export default function Home() {
   const [menuSearches, setMenuSearches] = useState<MenuSearch[]>([]);
   const [isFavorited, setIsFavorited] = useState(false);
   const [activeHistoryDrink, setActiveHistoryDrink] = useState<DrinkRating | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
   // Age Gate States
   const [ageGateCompleted, setAgeGateCompleted] = useState<boolean | null>(null);
@@ -137,7 +138,7 @@ export default function Home() {
     let offlineTimer: NodeJS.Timeout;
 
     if (isFirebaseEnabled() && auth) {
-      unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      unsubscribe = onAuthStateChanged(auth, async (currentUser: User | null) => {
         setAuthLoading(true);
         if (currentUser) {
           setUser(currentUser);
@@ -209,6 +210,40 @@ export default function Home() {
       }, 1800);
     }
     return () => clearInterval(interval);
+  }, [currentView, isLoadingRecommendation]);
+
+  // Loading progress bar simulation
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    const isParsingOrRecommending = currentView === "parsing" || isLoadingRecommendation;
+    
+    if (isParsingOrRecommending) {
+      const resetTimer = setTimeout(() => {
+        setLoadingProgress(0);
+      }, 0);
+
+      interval = setInterval(() => {
+        setLoadingProgress((prev) => {
+          if (prev >= 95) return prev;
+          const remaining = 95 - prev;
+          const increment = Math.max(1, Math.min(8, Math.random() * (remaining * 0.15)));
+          return Math.min(95, prev + increment);
+        });
+      }, 450);
+
+      return () => {
+        clearTimeout(resetTimer);
+        if (interval) clearInterval(interval);
+      };
+    } else {
+      const completionTimer = setTimeout(() => {
+        setLoadingProgress(100);
+      }, 0);
+
+      return () => {
+        clearTimeout(completionTimer);
+      };
+    }
   }, [currentView, isLoadingRecommendation]);
 
   if (!mounted) {
@@ -715,20 +750,30 @@ export default function Home() {
 
             {/* 4. Parsing / Loading State */}
             {(currentView === "parsing" || isLoadingRecommendation) && (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="w-20 h-20 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin mb-8"></div>
+              <div className="flex flex-col items-center justify-center py-12 text-center select-none">
+                <div className="w-16 h-16 border-4 border-amber-500/10 border-t-amber-500 rounded-full animate-spin mb-8"></div>
                 
-                <h3 className="text-2xl font-serif text-amber-500 font-semibold mb-2">
+                <h3 className="text-2xl font-serif text-amber-500 font-semibold mb-6">
                   {bartenderIsm}
                 </h3>
-                <p className="text-zinc-400 text-sm max-w-xs italic animate-pulse">
-                  This usually takes 8-12 seconds.
-                </p>
+
+                {/* Horizontal Progress Bar */}
+                <div className="w-64 max-w-xs flex flex-col gap-2.5 items-center">
+                  <div className="w-full bg-zinc-900 border border-zinc-850 h-2 rounded-full overflow-hidden shadow-inner">
+                    <div 
+                      className="bg-gradient-to-r from-amber-600 to-amber-500 h-full rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${loadingProgress}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-mono">
+                    Analyzing... {Math.round(loadingProgress)}%
+                  </span>
+                </div>
               </div>
             )}
 
             {/* 5. Mood Questions Screen */}
-            {currentView === "mood-questions" && (
+            {currentView === "mood-questions" && !isLoadingRecommendation && (
               <div className="flex flex-col flex-grow justify-between animate-reveal select-none">
                 <div>
                   <div className="flex justify-between items-center text-xs text-zinc-400 uppercase tracking-widest mb-6 font-mono font-bold">
@@ -853,7 +898,7 @@ export default function Home() {
             )}
 
             {/* 6. The Pick Recommendation Screen */}
-            {currentView === "recommendation" && (
+            {currentView === "recommendation" && !isLoadingRecommendation && (
               <div className="flex flex-col flex-grow justify-between animate-reveal">
                 {activePick ? (
                   <div className="space-y-6">
