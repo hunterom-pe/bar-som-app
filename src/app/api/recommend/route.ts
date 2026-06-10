@@ -1,0 +1,149 @@
+import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenAI } from "@google/genai";
+import { recommendDrink } from "@/lib/recommendation";
+import { DrinkRating } from "@/lib/types";
+
+let aiClient: GoogleGenAI | null = null;
+
+function getAiClient() {
+  if (!aiClient) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("Missing GEMINI_API_KEY environment variable");
+    }
+    aiClient = new GoogleGenAI({ apiKey });
+  }
+  return aiClient;
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { menu, vibe, adventure, profile, excludeIds = [], zeroProof = false } = body;
+
+    if (!menu || !vibe || !adventure || !profile) {
+      return NextResponse.json(
+        { error: "Missing required fields (menu, vibe, adventure, profile)." },
+        { status: 400 }
+      );
+    }
+
+    // 1. Compute recommendation locally
+    const { pick, runnerUp } = recommendDrink({
+      menu,
+      vibe,
+      adventure,
+      profile,
+      excludeIds,
+      zeroProof
+    });
+
+    if (!pick) {
+      return NextResponse.json({
+        pick: null,
+        justification: "",
+        runnerUp: null,
+        runnerUpJustification: ""
+      });
+    }
+
+    // 2. Call Gemini for justifications
+    const ai = getAiClient();
+    const systemInstruction = `You are a sharp, warm bartender friend. Your tone is confident, specific, a little playful, and never sommelier-pretentious.
+Write a one-sentence justification (maximum 25 words) for why the user should drink the recommended cocktail based on their current mood, adventure setting, and taste profile.
+If a runner-up is provided, also write a one-sentence justification for it.
+
+Here are examples of how you talk:
+- "The mezcal paloma — smoky enough to be interesting, light enough for round two."
+- "You always come back to bitter-and-stirred. The Black Manhattan is that, but with a twist you haven't met."
+- "Date night calls for something you can sip slowly and talk over. This is that drink."
+
+Request ONE sentence each, capping at ~25 words. Do not use generic explanations. Highlight specific flavor interactions or vibe alignment.`;
+
+    const promptText = `
+Vibe: ${vibe}
+Adventure Setting: ${adventure}
+User Taste Profile affinities (0-10): ${JSON.stringify(profile.affinities)}
+User Palate History: ${profile.history.slice(-5).map((h: DrinkRating) => `${h.drinkName} (${h.rating})`).join(", ") || "None yet"}
+
+Recommended Drink:
+- Name: ${pick.name}
+- Style: ${pick.styleFamily}
+- Ingredients: ${pick.ingredients.join(", ")}
+- Description: ${pick.description || "N/A"}
+- Flavor Vector: ${JSON.stringify(pick.flavorVector)}
+
+Runner-up Drink:
+${runnerUp ? `- Name: ${runnerUp.name}
+- Style: ${runnerUp.styleFamily}
+- Ingredients: ${runnerUp.ingredients.join(", ")}
+- Description: ${runnerUp.description || "N/A"}
+- Flavor Vector: ${JSON.stringify(runnerUp.flavorVector)}` : "None"}
+
+Please generate justifications for the pick and the runner-up.
+`;
+
+    const schema = {
+      type: "OBJECT",
+      properties: {
+        pickJustification: {
+          type: "STRING",
+          description: "One-sentence justification (max 25 words) for the primary recommended drink."
+        },
+        runnerUpJustification: {
+          type: "STRING",
+          description: "One-sentence justification (max 25 words) for the runner-up drink (if none, return empty string)."
+        }
+      },
+      required: ["pickJustification", "runnerUpJustification"]
+    };
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-pro",
+      contents: [
+        { text: promptText }
+      ],
+      config: {
+        systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: schema
+      }
+    });
+
+    const responseText = response.text;
+    let pickJustification = "";
+    let runnerUpJustification = "";
+
+    if (responseText) {
+      try {
+        const parsed = JSON.parse(responseText);
+        pickJustification = parsed.pickJustification || "";
+        runnerUpJustification = parsed.runnerUpJustification || "";
+      } catch (err) {
+        console.error("Failed to parse Gemini justification response:", responseText, err);
+      }
+    }
+
+    // Fallbacks if Gemini response fails
+    if (!pickJustification) {
+      pickJustification = `The ${pick.name} matches your vibe perfectly tonight.`;
+    }
+    if (runnerUp && !runnerUpJustification) {
+      runnerUpJustification = `Alternatively, the ${runnerUp.name} is a fantastic choice.`;
+    }
+
+    return NextResponse.json({
+      pick,
+      justification: pickJustification,
+      runnerUp,
+      runnerUpJustification
+    });
+  } catch (error: unknown) {
+    console.error("Error in /api/recommend:", error);
+    const errorMessage = error instanceof Error ? error.message : "An error occurred while generating recommendation.";
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    );
+  }
+}
