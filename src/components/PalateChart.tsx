@@ -4,9 +4,15 @@ import { FLAVOR_DIMENSIONS } from "@/lib/recommendation";
 
 interface PalateChartProps {
   affinities: Record<FlavorDimension, number>;
+  drinkAffinities?: Record<FlavorDimension, number>;
+  drinkName?: string;
 }
 
-export const PalateChart: React.FC<PalateChartProps> = ({ affinities }) => {
+export const PalateChart: React.FC<PalateChartProps> = ({ 
+  affinities,
+  drinkAffinities,
+  drinkName
+}) => {
   const size = 300;
   const center = size / 2;
   const maxRadius = 100;
@@ -37,6 +43,15 @@ export const PalateChart: React.FC<PalateChartProps> = ({ affinities }) => {
     const { x, y } = getCoordinates(i, val);
     return `${x},${y}`;
   }).join(" ");
+
+  // Drink data polygon (optional overlay)
+  const drinkDataPoints = drinkAffinities
+    ? FLAVOR_DIMENSIONS.map((dim, i) => {
+        const val = drinkAffinities[dim] ?? 0;
+        const { x, y } = getCoordinates(i, val);
+        return `${x},${y}`;
+      }).join(" ")
+    : "";
 
   // 3. Axis lines and text label coordinates
   const axes = FLAVOR_DIMENSIONS.map((dim, i) => {
@@ -116,7 +131,19 @@ export const PalateChart: React.FC<PalateChartProps> = ({ affinities }) => {
           className="transition-all duration-500 ease-out"
         />
 
-        {/* Draw data points as glowing dots */}
+        {/* Shaded drink palate polygon (optional overlay) */}
+        {drinkAffinities && drinkDataPoints && (
+          <polygon
+            points={drinkDataPoints}
+            fill="rgba(20, 184, 166, 0.12)" // semi-transparent teal
+            stroke="#14b8a6" // solid teal border
+            strokeWidth="2.2"
+            strokeDasharray="4,3"
+            className="transition-all duration-500 ease-out"
+          />
+        )}
+
+        {/* Draw user data points as glowing dots */}
         {FLAVOR_DIMENSIONS.map((dim, i) => {
           const val = affinities[dim] ?? 5;
           const { x, y } = getCoordinates(i, val);
@@ -129,6 +156,23 @@ export const PalateChart: React.FC<PalateChartProps> = ({ affinities }) => {
               fill="#fbbf24" // bright amber dot
               stroke="#1f2937"
               strokeWidth="1.5"
+            />
+          );
+        })}
+
+        {/* Draw drink data points as teal glowing dots (optional overlay) */}
+        {drinkAffinities && FLAVOR_DIMENSIONS.map((dim, i) => {
+          const val = drinkAffinities[dim] ?? 0;
+          const { x, y } = getCoordinates(i, val);
+          return (
+            <circle
+              key={`drink-${i}`}
+              cx={x}
+              cy={y}
+              r="3.5"
+              fill="#2dd4bf" // bright teal dot
+              stroke="#1f2937"
+              strokeWidth="1.2"
             />
           );
         })}
@@ -162,6 +206,20 @@ export const PalateChart: React.FC<PalateChartProps> = ({ affinities }) => {
           );
         })}
       </svg>
+
+      {/* Legend for dual profile chart */}
+      {drinkAffinities && (
+        <div className="flex justify-center gap-6 mt-1 text-[10px] font-mono tracking-wider uppercase select-none animate-reveal">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-zinc-950" />
+            <span className="text-zinc-400">Your Palate</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-teal-500 border border-zinc-950" />
+            <span className="text-zinc-400">{drinkName || "Cocktail"}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

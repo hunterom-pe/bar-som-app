@@ -3,13 +3,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth, isFirebaseEnabled } from "@/lib/firebase";
-import { ParsedDrink, ParsedMenu, TasteProfile, Vibe, Adventure, DrinkRating } from "@/lib/types";
+import { ParsedDrink, ParsedMenu, TasteProfile, Vibe, Adventure, DrinkRating, FlavorDimension } from "@/lib/types";
 import { ProfileStore, CloudProfileStore } from "@/lib/profile-store";
 import { PalateChart } from "@/components/PalateChart";
+import { PalateCalibration } from "@/components/PalateCalibration";
+import { DrinkRoulette } from "@/components/DrinkRoulette";
+import { cosineSimilarity } from "@/lib/recommendation";
 import { compressImage } from "@/lib/image";
 import SplashScreen from "@/app/components/SplashScreen";
 import AuthScreen from "@/app/components/AuthScreen";
 import CocktailVisualizer from "@/app/components/CocktailVisualizer";
+import { ParsedMenuSchema, GEMINI_RESPONSE_SCHEMA } from "@/lib/schemas";
+import { recommendDrink } from "@/lib/recommendation";
 
 const BARTENDER_ISMS = [
   "Stirring up the algorithms...",
@@ -138,6 +143,70 @@ function KeyIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
+async function callDirectGeminiClient(
+  contents: any[],
+  schema: any,
+  systemInstruction?: string
+) {
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+
+  const attemptCall = async (model: string) => {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const body: any = {
+      contents: [
+        {
+          parts: contents
+        }
+      ],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: schema
+      }
+    };
+    if (systemInstruction) {
+      body.systemInstruction = {
+        parts: [
+          { text: systemInstruction }
+        ]
+      };
+    }
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`HTTP ${res.status}: ${errText}`);
+    }
+
+    const data = await res.json();
+    const textOut = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!textOut) {
+      throw new Error("Empty response from Gemini API");
+    }
+    return JSON.parse(textOut);
+  };
+
+  // Try gemini-2.5-pro first
+  try {
+    return await attemptCall("gemini-2.5-pro");
+  } catch (errPro) {
+    console.warn("gemini-2.5-pro direct call failed. Falling back to gemini-2.5-flash...", errPro);
+    // Fallback to gemini-2.5-flash
+    try {
+      return await attemptCall("gemini-2.5-flash");
+    } catch (errFlash) {
+      console.error("Both gemini-2.5-pro and gemini-2.5-flash direct calls failed:", errFlash);
+      throw errFlash;
+    }
+  }
+}
+
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   
@@ -167,8 +236,10 @@ export default function Home() {
   
   // Sommelier views
   const [currentView, setCurrentView] = useState<
-    "landing" | "paste-menu" | "image-preview" | "parsing" | "mood-questions" | "recommendation" | "rating" | "palate" | "favorites" | "history"
+    "landing" | "paste-menu" | "image-preview" | "parsing" | "mood-questions" | "recommendation" | "rating" | "palate" | "favorites" | "history" | "calibration" | "roulette"
   >("landing");
+
+  const [roulettePick, setRoulettePick] = useState<ParsedDrink | null>(null);
 
   const [menuText, setMenuText] = useState("");
   const [menuImage, setMenuImage] = useState<string | null>(null);
@@ -528,19 +599,51 @@ export default function Home() {
     setBartenderIsm("Reading the menu... Glare is the enemy!");
 
     try {
-      const payload = isText ? { text: menuText } : { image: menuImage };
-      const res = await fetch(getApiUrl("/api/parse-menu"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+      let parsedData: ParsedMenu;
+      let contents: any[] = [];
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Failed to parse menu.");
+      if (!isText && menuImage) {
+        // Strip base64 metadata prefix if present
+        const matches = menuImage.match(/^data:(image\/\w+);base64,(.+)$/);
+        let mimeType = "image/jpeg";
+        let base64Data = menuImage;
+
+        if (matches) {
+          mimeType = matches[1];
+          base64Data = matches[2];
+        }
+
+        contents = [
+          {
+            inlineData: {
+              mimeType,
+              data: base64Data
+            }
+          },
+          {
+            text: "Parse this menu image. Extract every menu item and drink into the response schema. For each item: generate a short unique ID, identify base ingredients/spirits, assign a style family (or 'other'), score flavor dimensions 0-10 based on its profile, and categorize the ABV."
+          }
+        ];
+      } else {
+        contents = [
+          {
+            text: `Parse this menu text. Extract every menu item and drink into the response schema. For each item: generate a short unique ID, identify base ingredients/spirits, assign a style family (or 'other'), score flavor dimensions 0-10 based on its profile, and categorize the ABV.
+            
+            Menu text:
+            ${menuText}`
+          }
+        ];
       }
 
-      const parsedData: ParsedMenu = await res.json();
+      const rawParsed = await callDirectGeminiClient(contents, GEMINI_RESPONSE_SCHEMA);
+
+      // Validate structure using Zod safeParse on client
+      const validationResult = ParsedMenuSchema.safeParse(rawParsed);
+      if (!validationResult.success) {
+        console.error("Zod Validation failure on Gemini response:", validationResult.error.format());
+        throw new Error("Failed to validate parsed menu format. Try again.");
+      }
+      parsedData = validationResult.data;
       if (!parsedData.drinks || parsedData.drinks.length === 0) {
         throw new Error("No drinks identified on this menu. Try pasting instead?");
       }
@@ -595,36 +698,115 @@ export default function Home() {
   const getRecommendation = async (
     currentVibe: Vibe,
     currentAdventure: Adventure,
-    currentExclusions: string[] = []
+    currentExclusions: string[] = [],
+    overridePick?: ParsedDrink
   ) => {
     setIsLoadingRecommendation(true);
     setApiError(null);
 
     try {
       const userProfile = profile || ProfileStore.getProfile();
-      const res = await fetch(getApiUrl("/api/recommend"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          menu: parsedMenu,
-          vibe: currentVibe,
-          adventure: currentAdventure,
-          profile: userProfile,
-          excludeIds: currentExclusions,
-          zeroProof
-        })
-      });
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Recommendation request failed.");
+      if (!parsedMenu) {
+        throw new Error("No menu loaded. Please scan a menu first.");
       }
 
-      const data = await res.json();
-      setRecommendation(data);
-      setActivePick(data.pick);
-      setActiveJustification(data.justification);
-      setActiveCustomization(data.customization || "");
+      // 1. Run local recommendation computation
+      const { pick, runnerUp } = overridePick
+        ? { pick: overridePick, runnerUp: null }
+        : recommendDrink({
+            menu: parsedMenu,
+            vibe: currentVibe,
+            adventure: currentAdventure,
+            profile: userProfile,
+            excludeIds: currentExclusions,
+            zeroProof
+          });
+
+      if (!pick) {
+        throw new Error("No matching drinks found on this menu.");
+      }
+
+      // 2. Build prompts for Gemini
+      const systemInstruction = `You are a sharp, warm bartender friend. Your tone is confident, specific, a little playful, and never sommelier-pretentious.
+Write a one-sentence justification (maximum 25 words) for why the user should drink the recommended cocktail based on their current mood, adventure setting, and taste profile.
+Also write a brief, highly specific bartender customization secret or ordering tip (maximum 12 words) for the recommended cocktail (e.g. "Order with a mezcal float", "Ask for extra orange peel", "Request an olive rinse").
+If a runner-up is provided, also write a justification and customization secret for it.
+
+Here are examples of how you talk:
+- Justification: "The mezcal paloma — smoky enough to be interesting, light enough for round two."
+  Customization: "Ask the bartender for a smoked salt rim."
+- Justification: "You always come back to bitter-and-stirred. The Black Manhattan is that, but with a twist you haven't met."
+  Customization: "Ask for orange bitters instead of Angostura."
+
+Do not use generic explanations. Highlight specific flavor interactions or vibe alignment.`;
+
+      const promptText = `
+Vibe: ${currentVibe}
+Adventure Setting: ${currentAdventure}
+User Taste Profile affinities (0-10): ${JSON.stringify(userProfile.affinities)}
+User Palate History: ${userProfile.history.slice(-5).map((h: DrinkRating) => `${h.drinkName} (${h.rating})`).join(", ") || "None yet"}
+ 
+Recommended Drink:
+- Name: ${pick.name}
+- Style: ${pick.styleFamily}
+- Ingredients: ${pick.ingredients.join(", ")}
+- Description: ${pick.description || "N/A"}
+- Flavor Vector: ${JSON.stringify(pick.flavorVector)}
+ 
+Runner-up Drink:
+${runnerUp ? `- Name: ${runnerUp.name}
+- Style: ${runnerUp.styleFamily}
+- Ingredients: ${runnerUp.ingredients.join(", ")}
+- Description: ${runnerUp.description || "N/A"}
+- Flavor Vector: ${JSON.stringify(runnerUp.flavorVector)}` : "None"}
+ 
+Please generate justifications and customization secrets for the pick and the runner-up.
+`;
+
+      const schema = {
+        type: "OBJECT",
+        properties: {
+          pickJustification: {
+            type: "STRING",
+            description: "One-sentence justification (max 25 words) for the primary recommended drink."
+          },
+          pickCustomization: {
+            type: "STRING",
+            description: "A short, specific bartender ordering tweak or customization secret (max 12 words) for the primary recommended drink."
+          },
+          runnerUpJustification: {
+            type: "STRING",
+            description: "One-sentence justification (max 25 words) for the runner-up drink (if none, return empty string)."
+          },
+          runnerUpCustomization: {
+            type: "STRING",
+            description: "A short, specific bartender ordering tweak or customization secret (max 12 words) for the runner-up drink (if none, return empty string)."
+          }
+        },
+        required: ["pickJustification", "pickCustomization", "runnerUpJustification", "runnerUpCustomization"]
+      };
+
+      const rawResult = await callDirectGeminiClient([{ text: promptText }], schema, systemInstruction);
+
+      const pickJustification = rawResult.pickJustification || `The ${pick.name} matches your vibe perfectly tonight.`;
+      const pickCustomization = rawResult.pickCustomization || "Order it exactly as specified on the menu.";
+      const runnerUpJustification = rawResult.runnerUpJustification || (runnerUp ? `Alternatively, the ${runnerUp.name} is a fantastic choice.` : "");
+      const runnerUpCustomization = rawResult.runnerUpCustomization || (runnerUp ? "Enjoy it standard or ask your bartender's opinion." : "");
+
+      const finalData = {
+        pick,
+        justification: pickJustification,
+        customization: pickCustomization,
+        runnerUp,
+        runnerUpJustification,
+        runnerUpCustomization
+      };
+
+      setRecommendation(finalData);
+      setActivePick(pick);
+      setActiveJustification(pickJustification);
+      setActiveCustomization(pickCustomization);
       setCurrentView("recommendation");
     } catch (err) {
       console.error(err);
@@ -751,6 +933,69 @@ export default function Home() {
     }
   };
 
+  const handleCalibrationComplete = async (
+    newAffinities: Record<FlavorDimension, number>,
+    isZeroProofSelected: boolean
+  ) => {
+    const currentProfile = profile || ProfileStore.getProfile();
+    const updatedProfile: TasteProfile = {
+      ...currentProfile,
+      affinities: newAffinities,
+    };
+    
+    if (user && !offlineMode) {
+      await CloudProfileStore.saveCloudProfile(user.uid, updatedProfile);
+    } else {
+      ProfileStore.saveProfile(updatedProfile);
+    }
+    
+    setProfile(updatedProfile);
+    if (isZeroProofSelected) {
+      setZeroProof(true);
+    }
+    setCurrentView("palate");
+  };
+
+  const getRouletteDrinks = () => {
+    if (!parsedMenu) return [];
+    const userProfile = profile || ProfileStore.getProfile();
+    
+    // Filter zero-proof
+    let candidates = parsedMenu.drinks.filter((d) => {
+      if (zeroProof) return d.abvCategory === "zero";
+      return true;
+    });
+    
+    if (candidates.length === 0) {
+      candidates = parsedMenu.drinks;
+    }
+    
+    // Score with cosineSimilarity
+    const scored = candidates.map((d) => {
+      const score = cosineSimilarity(userProfile.affinities, d.flavorVector);
+      return { drink: d, score };
+    });
+    
+    // Top 10 matches
+    return scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10)
+      .map((x) => x.drink);
+  };
+
+  const handleRouletteLanding = (drink: ParsedDrink) => {
+    setRoulettePick(drink);
+  };
+
+  const handleUnlockRouletteSecret = async () => {
+    if (!roulettePick) return;
+    const pickToUnlock = roulettePick;
+    setRoulettePick(null);
+    
+    // Request recommendation details with overridePick
+    await getRecommendation("date-night", "safe", [], pickToUnlock);
+  };
+
   // Main viewport container render
   return (
     <div className="w-full max-w-md mx-auto h-[100dvh] flex flex-col bg-zinc-950 shadow-2xl relative px-6 pt-[calc(env(safe-area-inset-top)+1.25rem)] pb-0 border-x border-zinc-900 overflow-hidden">
@@ -867,6 +1112,22 @@ export default function Home() {
             {currentView === "landing" && (
               <div className="flex flex-col justify-between flex-grow animate-reveal">
                 <div className="flex-grow flex flex-col justify-center items-center text-center py-6">
+                  {profile && profile.ratingsCount === 0 && Object.values(profile.affinities).every(v => v === 5) && (
+                    <div 
+                      onClick={() => setCurrentView("calibration")}
+                      className="w-full mb-6 p-4 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/20 hover:border-amber-500/35 rounded-2xl cursor-pointer text-left transition-all active:scale-[0.99] select-none"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🎯</span>
+                        <div>
+                          <h4 className="text-sm font-bold text-amber-500">Calibrate Your Palate</h4>
+                          <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
+                            Take the 6-question taste quiz to tailor matches instantly!
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="mb-6">
                     <MartiniIcon className="w-16 h-16 text-amber-500" />
                   </div>
@@ -1053,8 +1314,16 @@ export default function Home() {
                   {/* Step 1: Vibe */}
                   {moodStep === 1 && (
                     <div>
-                      <h2 className="text-3xl font-bold mb-6 font-serif tracking-tight">
-                        What&apos;s the vibe tonight?
+                      <h2 className="text-3xl font-bold mb-6 font-serif tracking-tight flex justify-between items-center">
+                        <span>What&apos;s the vibe?</span>
+                        {parsedMenu && parsedMenu.drinks.length > 0 && (
+                          <button
+                            onClick={() => setCurrentView("roulette")}
+                            className="px-3.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-500/35 text-amber-500 rounded-xl text-xs font-bold font-mono tracking-wider uppercase transition-all active:scale-[0.97] cursor-pointer"
+                          >
+                            🎰 Roulette
+                          </button>
+                        )}
                       </h2>
                       <div className="grid grid-cols-2 gap-4">
                         <button
@@ -1245,6 +1514,18 @@ export default function Home() {
                         </div>
                       )}
 
+                      {/* Palate Match Overlay Chart */}
+                      <div className="glass-card rounded-2xl p-3 mb-6 select-none flex flex-col items-center">
+                        <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-mono mb-1 self-start pl-1">
+                          Palate Alignment
+                        </h4>
+                        <PalateChart
+                          affinities={(profile || ProfileStore.getProfile()).affinities}
+                          drinkAffinities={activePick.flavorVector}
+                          drinkName={activePick.name}
+                        />
+                      </div>
+
                       {/* Ingredients */}
                       <div className="mb-4">
                         <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2 font-mono">
@@ -1395,6 +1676,15 @@ export default function Home() {
                         Drinks Rated
                       </div>
                     </div>
+                  </div>
+
+                  <div className="border-t border-zinc-850/60 pt-4 mt-3 flex justify-center">
+                    <button
+                      onClick={() => setCurrentView("calibration")}
+                      className="px-4 py-2 bg-zinc-900/60 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 hover:text-amber-500 font-semibold rounded-xl text-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      🎯 Recalibrate Taste Buds
+                    </button>
                   </div>
                 </div>
 
@@ -1573,11 +1863,40 @@ export default function Home() {
                 )}
               </div>
             )}
-
+          
           </main>
 
+          {/* 11. Palate Calibration Onboarding Quiz Screen */}
+          {currentView === "calibration" && (
+            <div className="flex flex-col flex-grow h-full justify-between">
+              <PalateCalibration
+                onComplete={handleCalibrationComplete}
+                onCancel={() => {
+                  if (profile && profile.history.length === 0) {
+                    setCurrentView("landing");
+                  } else {
+                    setCurrentView("palate");
+                  }
+                }}
+              />
+            </div>
+          )}
+
+          {/* 12. Interactive Drink Roulette Screen */}
+          {currentView === "roulette" && parsedMenu && (
+            <div className="flex flex-col flex-grow h-full justify-between">
+              <DrinkRoulette
+                drinks={getRouletteDrinks()}
+                onLanding={handleRouletteLanding}
+                onClose={() => {
+                  setCurrentView("mood-questions");
+                }}
+              />
+            </div>
+          )}
+
           {/* Bottom Navigation Bar */}
-          {currentView !== "parsing" && !isLoadingRecommendation && (
+          {currentView !== "parsing" && !isLoadingRecommendation && currentView !== "calibration" && currentView !== "roulette" && (
             <nav className="w-[calc(100%+3rem)] bg-zinc-950/90 backdrop-blur-md border-t border-zinc-900 py-3 flex justify-center gap-10 items-center z-40 select-none mt-auto -mx-6 px-6 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
               <button
                 onClick={() => {
@@ -1684,31 +2003,16 @@ export default function Home() {
               />
             </div>
 
-            {/* Flavor Vector Breakdown */}
-            <div className="space-y-3 mb-6">
-              <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-mono mb-2">
-                Flavor Characteristics
+            {/* Palate Comparison Overlay */}
+            <div className="mb-6 flex flex-col items-center">
+              <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-mono mb-2 self-start">
+                Flavor Alignment
               </h4>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                {Object.entries(activeHistoryDrink.flavorVector)
-                  .filter(([, val]) => val > 0)
-                  .sort(([, valA], [, valB]) => valB - valA)
-                  .slice(0, 4)
-                  .map(([key, val]) => (
-                    <div key={key} className="flex flex-col gap-1">
-                      <div className="flex justify-between items-center text-[10px] uppercase font-bold tracking-wider text-zinc-400">
-                        <span className="capitalize">{key}</span>
-                        <span className="text-amber-500 font-mono">{val}/10</span>
-                      </div>
-                      <div className="w-full bg-zinc-950 h-1.5 rounded-full overflow-hidden border border-zinc-900">
-                        <div 
-                          className="bg-amber-500 h-full rounded-full" 
-                          style={{ width: `${val * 10}%` }} 
-                        />
-                      </div>
-                    </div>
-                  ))}
-              </div>
+              <PalateChart
+                affinities={(profile || ProfileStore.getProfile()).affinities}
+                drinkAffinities={activeHistoryDrink.flavorVector}
+                drinkName={activeHistoryDrink.drinkName}
+              />
             </div>
 
             <button
@@ -1717,6 +2021,75 @@ export default function Home() {
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Roulette Pick Success Modal */}
+      {roulettePick && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-6 select-none animate-reveal">
+          <div className="glass-card rounded-3xl p-6 max-w-sm w-full relative shadow-2xl">
+            <button
+              onClick={() => setRoulettePick(null)}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-200 text-lg p-2 leading-none focus:outline-none cursor-pointer"
+              aria-label="Close modal"
+            >
+              ✕
+            </button>
+
+            <div className="flex justify-between items-center mb-6 pr-4">
+              <div className="flex-grow pr-2">
+                <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest font-mono">
+                  Roulette Match!
+                </span>
+                <h3 className="text-xl font-extrabold font-serif text-zinc-100 mt-1 leading-tight">
+                  {roulettePick.name}
+                </h3>
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold capitalize">
+                    {roulettePick.styleFamily}
+                  </span>
+                  {roulettePick.price && (
+                    <span className="text-zinc-400 text-[10px] font-mono font-bold">
+                      {roulettePick.price}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <CocktailVisualizer
+                styleFamily={roulettePick.styleFamily}
+                name={roulettePick.name}
+                className="shrink-0"
+              />
+            </div>
+
+            {/* Palate Match Overlay Chart */}
+            <div className="glass-card rounded-2xl p-3 mb-6 select-none flex flex-col items-center">
+              <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-mono mb-1 self-start pl-1">
+                Palate Comparison
+              </h4>
+              <PalateChart
+                affinities={(profile || ProfileStore.getProfile()).affinities}
+                drinkAffinities={roulettePick.flavorVector}
+                drinkName={roulettePick.name}
+              />
+            </div>
+
+            <div className="space-y-2.5">
+              <button
+                onClick={handleUnlockRouletteSecret}
+                className="w-full py-4.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-2xl text-base tracking-wide transition-colors cursor-pointer"
+              >
+                🔮 Unlock Bartender Secrets
+              </button>
+              
+              <button
+                onClick={() => setRoulettePick(null)}
+                className="w-full py-3 bg-zinc-900/60 hover:bg-zinc-800 border border-zinc-850 text-zinc-400 font-semibold rounded-2xl text-sm transition-colors cursor-pointer"
+              >
+                🎰 Spin Again
+              </button>
+            </div>
           </div>
         </div>
       )}
