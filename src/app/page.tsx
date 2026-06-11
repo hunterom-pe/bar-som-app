@@ -43,6 +43,111 @@ const getDiagnosticLog = (progress: number): string => {
   return "Optimizing final cocktail selections...";
 };
 
+// --- Premium SVG Icons ---
+function CameraIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+
+function ChartIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  );
+}
+
+function StarIcon({ className = "w-5 h-5", filled = false }: { className?: string, filled?: boolean }) {
+  return (
+    <svg className={className} fill={filled ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.961 0 1.36 1.246.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.772-.564-.373-1.81.588-1.81h4.906a1 1 0 00.95-.69l1.519-4.674z" />
+    </svg>
+  );
+}
+
+function HistoryIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function MartiniIcon({ className = "w-16 h-16 text-amber-500" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 4h14l-7 8-7-8z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 12v8m-4 0h8" />
+      <circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="none" />
+      <line x1="10" y1="5" x2="13.5" y2="8.5" stroke="currentColor" strokeWidth="1" />
+    </svg>
+  );
+}
+
+function LightBulbIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    </svg>
+  );
+}
+
+function ShakeIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 8a3 3 0 010 8m18-8a3 3 0 010 8" />
+    </svg>
+  );
+}
+
+function HeartIcon({ className = "w-5 h-5", filled = false }: { className?: string, filled?: boolean }) {
+  return (
+    <svg className={className} fill={filled ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+    </svg>
+  );
+}
+
+function MehIcon({ className = "w-5 h-5", filled = false }: { className?: string, filled?: boolean }) {
+  return (
+    <svg className={className} fill={filled ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <circle cx="12" cy="12" r="9" />
+      <line x1="9" y1="15" x2="15" y2="15" strokeLinecap="round" />
+      <circle cx="9.5" cy="10.5" r="1.5" fill={filled ? "currentColor" : "none"} />
+      <circle cx="14.5" cy="10.5" r="1.5" fill={filled ? "currentColor" : "none"} />
+    </svg>
+  );
+}
+
+function ThumbsDownIcon({ className = "w-5 h-5", filled = false }: { className?: string, filled?: boolean }) {
+  return (
+    <svg className={className} fill={filled ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 012 2v3.667C14.754 11.412 16.18 13.102 18 14V21m-4-7h2a2 2 0 002-2V9a2 2 0 00-2-2h-3v1z" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className = "w-16 h-16 text-green-500" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function KeyIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m-2-2a2 2 0 00-2 2m2-2a2 2 0 012-2m0 0a2 2 0 00-2-2m2 2h2a2 2 0 012 2v2a2 2 0 01-2 2H9M3 18l6-6M3 18l-1-1m1 1v1m4-4H5m3 2h2m-2-2v2" />
+    </svg>
+  );
+}
+
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   
@@ -772,7 +877,9 @@ export default function Home() {
             {currentView === "landing" && (
               <div className="flex flex-col justify-between flex-grow animate-reveal">
                 <div className="flex-grow flex flex-col justify-center items-center text-center py-6">
-                  <div className="text-6xl mb-6">🍸</div>
+                  <div className="mb-6">
+                    <MartiniIcon className="w-16 h-16 text-amber-500" />
+                  </div>
                   <h2 className="text-4xl font-extrabold font-serif mb-2 tracking-tight">
                     Decide in Seconds
                   </h2>
@@ -785,7 +892,7 @@ export default function Home() {
                       onClick={triggerCamera}
                       className="w-full py-5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold rounded-2xl text-lg tracking-wide shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
                     >
-                      <span className="text-xl">📸</span> Scan the Menu
+                      <CameraIcon className="w-6 h-6 text-zinc-950" /> Scan the Menu
                     </button>
                     
                     {/* Hidden File Input */}
@@ -807,8 +914,8 @@ export default function Home() {
                     </button>
                   </div>
 
-                  <div className="mt-8 text-zinc-400 text-xs flex items-start gap-2 max-w-xs text-left">
-                    <span className="leading-none mt-0.5">💡</span>
+                  <div className="mt-8 text-zinc-400 text-xs flex items-start gap-2.5 max-w-xs text-left">
+                    <LightBulbIcon className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                     <div>Get the whole menu in frame — glare is the enemy.</div>
                   </div>
                 </div>
@@ -1060,14 +1167,14 @@ export default function Home() {
                 {shakePermission !== true && (
                   <button
                     onClick={requestShakePermission}
-                    className="w-full mt-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-500 rounded-xl text-xs font-semibold tracking-wider uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full mt-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-500 rounded-xl text-xs font-semibold tracking-wider uppercase transition-colors flex items-center justify-center gap-2.5 cursor-pointer"
                   >
-                    📳 Enable Shake-to-Somm
+                    <ShakeIcon className="w-4 h-4 text-amber-500 shrink-0" /> Enable Shake-to-Somm
                   </button>
                 )}
                 {shakePermission === true && (
-                  <div className="w-full mt-4 py-2.5 bg-zinc-900/40 border border-zinc-850 rounded-xl text-[10px] font-semibold tracking-wider uppercase text-zinc-400 flex items-center justify-center gap-2 select-none animate-pulse">
-                    📳 Shake phone for a surprise choice!
+                  <div className="w-full mt-4 py-2.5 bg-zinc-900/40 border border-zinc-850 rounded-xl text-[10px] font-semibold tracking-wider uppercase text-zinc-400 flex items-center justify-center gap-2.5 select-none animate-pulse">
+                    <ShakeIcon className="w-3.5 h-3.5 text-amber-500 shrink-0" /> Shake phone for a surprise choice!
                   </div>
                 )}
 
@@ -1147,7 +1254,7 @@ export default function Home() {
                       {/* Bartender Tweak Secret */}
                       {activeCustomization && (
                         <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-4 mb-6 flex items-start gap-3 select-none">
-                          <span className="text-lg leading-none mt-0.5">🔑</span>
+                          <KeyIcon className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                           <div className="text-xs">
                             <span className="font-bold text-amber-500 block uppercase tracking-wider font-mono mb-1 text-[10px]">
                               Bartender&apos;s Secret Tweak
@@ -1243,7 +1350,9 @@ export default function Home() {
               <div className="flex flex-col flex-grow justify-center select-none">
                 {showRatingFeedback ? (
                   <div className="text-center py-12 animate-reveal">
-                    <div className="text-7xl mb-6 animate-bounce">👍</div>
+                    <div className="flex justify-center mb-6 animate-bounce">
+                      <CheckIcon className="w-16 h-16 text-amber-500" />
+                    </div>
                     <h3 className="text-3xl font-serif text-amber-500 font-bold mb-3">Palate Calibrated!</h3>
                     <p className="text-zinc-400 text-sm max-w-xs mx-auto">
                       Spec is logging this drink to adjust your future recommendations.
@@ -1261,19 +1370,19 @@ export default function Home() {
                         onClick={() => handleRateDrink("loved")}
                         className="w-full py-4 glass-card hover:border-green-500/40 text-zinc-200 font-bold rounded-2xl text-base transition-all active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
                       >
-                        <span className="text-lg">😍</span> Loved it!
+                        <HeartIcon className="w-5 h-5 text-green-500 shrink-0" filled={true} /> Loved it!
                       </button>
                       <button
                         onClick={() => handleRateDrink("fine")}
                         className="w-full py-4 glass-card hover:border-amber-500/40 text-zinc-200 font-bold rounded-2xl text-base transition-all active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
                       >
-                        <span className="text-lg">😐</span> It was fine
+                        <MehIcon className="w-5 h-5 text-amber-500 shrink-0" filled={true} /> It was fine
                       </button>
                       <button
                         onClick={() => handleRateDrink("nope")}
                         className="w-full py-4 glass-card hover:border-red-500/40 text-zinc-200 font-bold rounded-2xl text-base transition-all active:scale-[0.98] flex items-center justify-center gap-3 cursor-pointer"
                       >
-                        <span className="text-lg">👎</span> Not for me
+                        <ThumbsDownIcon className="w-5 h-5 text-red-500 shrink-0" filled={true} /> Not for me
                       </button>
                     </div>
                   </div>
@@ -1321,7 +1430,7 @@ export default function Home() {
                       No drinks rated yet.
                     </div>
                   ) : (
-                    <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                    <div className="space-y-2">
                       {profile.history.slice().reverse().map((item, idx) => (
                         <div
                           key={idx}
@@ -1334,10 +1443,10 @@ export default function Home() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs">
-                              {item.rating === "loved" && "😍"}
-                              {item.rating === "fine" && "😐"}
-                              {item.rating === "nope" && "👎"}
+                            <span className="flex items-center">
+                              {item.rating === "loved" && <HeartIcon className="w-4 h-4 text-green-500" filled={true} />}
+                              {item.rating === "fine" && <MehIcon className="w-4 h-4 text-amber-500" filled={true} />}
+                              {item.rating === "nope" && <ThumbsDownIcon className="w-4 h-4 text-red-500" filled={true} />}
                             </span>
                             <span className="text-zinc-400 font-mono">
                               {new Date(item.timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
@@ -1501,7 +1610,7 @@ export default function Home() {
                     : "text-zinc-500 hover:text-zinc-350"
                 }`}
               >
-                <span className="text-lg">📸</span>
+                <CameraIcon className="w-5.5 h-5.5" />
                 <span className="text-[10px] font-sans font-bold uppercase tracking-wider">Sommelier</span>
               </button>
 
@@ -1515,7 +1624,7 @@ export default function Home() {
                     : "text-zinc-500 hover:text-zinc-355"
                 }`}
               >
-                <span className="text-lg">📊</span>
+                <ChartIcon className="w-5.5 h-5.5" />
                 <span className="text-[10px] font-sans font-bold uppercase tracking-wider">Palate</span>
               </button>
 
@@ -1529,7 +1638,7 @@ export default function Home() {
                     : "text-zinc-500 hover:text-zinc-355"
                 }`}
               >
-                <span className="text-lg">⭐</span>
+                <StarIcon className="w-5.5 h-5.5" filled={currentView === "favorites"} />
                 <span className="text-[10px] font-sans font-bold uppercase tracking-wider">Favorites</span>
               </button>
 
@@ -1543,7 +1652,7 @@ export default function Home() {
                     : "text-zinc-500 hover:text-zinc-355"
                 }`}
               >
-                <span className="text-lg">📜</span>
+                <HistoryIcon className="w-5.5 h-5.5" />
                 <span className="text-[10px] font-sans font-bold uppercase tracking-wider">History</span>
               </button>
             </nav>
