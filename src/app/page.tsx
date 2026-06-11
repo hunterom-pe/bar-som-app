@@ -1599,7 +1599,7 @@ export default function Home() {
 
           {/* Bottom Navigation Bar */}
           {currentView !== "parsing" && !isLoadingRecommendation && (
-            <nav className="w-full bg-zinc-950/90 backdrop-blur-md border-t border-zinc-900 py-3 flex justify-around items-center z-40 select-none mt-auto -mx-6 px-6 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
+            <nav className="w-full bg-zinc-950/90 backdrop-blur-md border-t border-zinc-900 py-3 flex justify-center gap-10 items-center z-40 select-none mt-auto -mx-6 px-6 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
               <button
                 onClick={() => {
                   resetStateToLanding();
