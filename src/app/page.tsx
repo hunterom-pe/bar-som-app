@@ -914,8 +914,8 @@ export default function Home() {
                     </button>
                   </div>
 
-                  <div className="mt-8 text-zinc-400 text-xs flex items-start gap-2.5 max-w-xs text-left">
-                    <LightBulbIcon className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="mt-8 text-zinc-400 text-xs flex items-center gap-2.5 max-w-xs text-left">
+                    <LightBulbIcon className="w-4 h-4 text-amber-500 shrink-0" />
                     <div>Get the whole menu in frame — glare is the enemy.</div>
                   </div>
                 </div>
