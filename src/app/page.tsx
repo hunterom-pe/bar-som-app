@@ -33,16 +33,6 @@ const getApiUrl = (path: string): string => {
   return path;
 };
 
-const getDiagnosticLog = (progress: number): string => {
-  if (progress < 15) return "Initializing optical character reader...";
-  if (progress < 30) return "Adjusting lens contrast & camera skew...";
-  if (progress < 50) return "Binarizing text frames & mapping coordinates...";
-  if (progress < 65) return "AI: Identifying cocktail names & pricing blocks...";
-  if (progress < 80) return "SOMM: Translating flavor profiles and botanicals...";
-  if (progress < 92) return "Matching drink characteristics with your palate...";
-  return "Optimizing final cocktail selections...";
-};
-
 // --- Premium SVG Icons ---
 function CameraIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
@@ -1039,24 +1029,13 @@ export default function Home() {
                   {bartenderIsm}
                 </h3>
 
-                {/* Progress & Console logs */}
+                {/* Progress bar */}
                 <div className="w-72 max-w-xs flex flex-col gap-3 items-center px-4">
                   <div className="w-full bg-zinc-900/60 border border-zinc-850 h-2 rounded-full overflow-hidden shadow-inner">
                     <div 
                       className="bg-gradient-to-r from-amber-600 to-amber-500 h-full rounded-full transition-all duration-300 ease-out"
                       style={{ width: `${loadingProgress}%` }}
                     />
-                  </div>
-                  
-                  {/* Scrolling Console Log */}
-                  <div className="w-full glass-card py-2 px-3.5 rounded-xl text-left font-mono text-[9px] text-zinc-400 min-h-[48px] flex flex-col justify-center gap-1 border-zinc-850/60">
-                    <div className="text-amber-500/80 font-bold uppercase tracking-wider flex justify-between">
-                      <span>Status Terminal</span>
-                      <span className="animate-pulse">● Live</span>
-                    </div>
-                    <div className="truncate text-zinc-350">
-                      &gt; {getDiagnosticLog(loadingProgress)}
-                    </div>
                   </div>
                 </div>
               </div>
