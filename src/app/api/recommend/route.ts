@@ -19,8 +19,8 @@ function getAiClient() {
 async function generateContentWithRetry(
   ai: GoogleGenAI,
   options: { model: string; contents: any[]; config?: any },
-  maxRetries = 3,
-  baseDelayMs = 800
+  maxRetries = 2,
+  baseDelayMs = 400
 ) {
   let attempt = 0;
   while (true) {
@@ -29,22 +29,23 @@ async function generateContentWithRetry(
     } catch (error: any) {
       attempt++;
       const errorMessage = error instanceof Error ? error.message : String(error);
-      const isTransient =
-        errorMessage.includes("429") ||
-        errorMessage.includes("503") ||
-        errorMessage.includes("RESOURCE_EXHAUSTED") ||
-        errorMessage.includes("UNAVAILABLE") ||
-        errorMessage.includes("overloaded") ||
-        errorMessage.includes("demand") ||
-        errorMessage.includes("limit");
+      console.error(`[Gemini API Error] Model: ${options.model}, Attempt: ${attempt}/${maxRetries}, Details:`, error);
+
+      const isClientError =
+        errorMessage.includes("400") ||
+        errorMessage.includes("403") ||
+        errorMessage.includes("INVALID_ARGUMENT") ||
+        errorMessage.includes("API_KEY");
+
+      const isTransient = !isClientError;
 
       if (!isTransient || attempt >= maxRetries) {
         throw error;
       }
 
-      const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 200;
+      const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 100;
       console.warn(
-        `Gemini API transient error on ${options.model} (attempt ${attempt}/${maxRetries}): ${errorMessage}. Retrying in ${Math.round(delay)}ms...`
+        `Retrying Gemini API call for ${options.model} in ${Math.round(delay)}ms...`
       );
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
