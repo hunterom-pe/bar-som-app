@@ -696,6 +696,7 @@ export default function Home() {
   ) {
     setIsLoadingRecommendation(true);
     setApiError(null);
+    setCurrentView("recommendation");
 
     try {
       const userProfile = profile || ProfileStore.getProfile();
@@ -1860,7 +1861,7 @@ Please generate justifications and customization secrets for the pick and the ru
           </main>
 
           {/* 11. Palate Calibration Onboarding Quiz Screen */}
-          {currentView === "calibration" && (
+          {currentView === "calibration" && !isLoadingRecommendation && (
             <div className="flex flex-col flex-grow h-full justify-between">
               <PalateCalibration
                 onComplete={handleCalibrationComplete}
@@ -1876,7 +1877,7 @@ Please generate justifications and customization secrets for the pick and the ru
           )}
 
           {/* 12. Interactive Drink Roulette Screen */}
-          {currentView === "roulette" && parsedMenu && (
+          {currentView === "roulette" && !isLoadingRecommendation && parsedMenu && (
             <div className="flex flex-col flex-grow h-full justify-between">
               <DrinkRoulette
                 drinks={getRouletteDrinks()}
