@@ -16,6 +16,41 @@ function getAiClient() {
   return aiClient;
 }
 
+async function generateContentWithRetry(
+  ai: GoogleGenAI,
+  options: { model: string; contents: any[]; config?: any },
+  maxRetries = 3,
+  baseDelayMs = 800
+) {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await ai.models.generateContent(options);
+    } catch (error: any) {
+      attempt++;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isTransient =
+        errorMessage.includes("429") ||
+        errorMessage.includes("503") ||
+        errorMessage.includes("RESOURCE_EXHAUSTED") ||
+        errorMessage.includes("UNAVAILABLE") ||
+        errorMessage.includes("overloaded") ||
+        errorMessage.includes("demand") ||
+        errorMessage.includes("limit");
+
+      if (!isTransient || attempt >= maxRetries) {
+        throw error;
+      }
+
+      const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 200;
+      console.warn(
+        `Gemini API transient error on ${options.model} (attempt ${attempt}/${maxRetries}): ${errorMessage}. Retrying in ${Math.round(delay)}ms...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -81,7 +116,7 @@ export async function POST(request: NextRequest) {
 
     let response;
     try {
-      response = await ai.models.generateContent({
+      response = await generateContentWithRetry(ai, {
         model: "gemini-2.5-pro",
         contents,
         config: {
@@ -90,8 +125,8 @@ export async function POST(request: NextRequest) {
         }
       });
     } catch (err: unknown) {
-      console.warn("gemini-2.5-pro failed or is unavailable. Falling back to gemini-2.5-flash...", err);
-      response = await ai.models.generateContent({
+      console.warn("gemini-2.5-pro failed after retries. Falling back to gemini-2.5-flash...", err);
+      response = await generateContentWithRetry(ai, {
         model: "gemini-2.5-flash",
         contents,
         config: {
