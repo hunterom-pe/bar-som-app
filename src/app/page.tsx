@@ -27,16 +27,7 @@ const BARTENDER_ISMS = [
   "Measuring the proportions..."
 ];
 
-const getApiUrl = (path: string): string => {
-  if (
-    typeof window !== "undefined" &&
-    (window as Window & { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
-  ) {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://bar-som-app.netlify.app";
-    return `${baseUrl}${path}`;
-  }
-  return path;
-};
+
 
 // --- Premium SVG Icons ---
 function CameraIcon({ className = "w-5 h-5" }: { className?: string }) {
@@ -144,15 +135,15 @@ function KeyIcon({ className = "w-4 h-4" }: { className?: string }) {
 }
 
 async function callDirectGeminiClient(
-  contents: any[],
-  schema: any,
+  contents: unknown[],
+  schema: unknown,
   systemInstruction?: string
 ) {
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
 
   const attemptCall = async (model: string) => {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    const body: any = {
+    const body: Record<string, unknown> = {
       contents: [
         {
           parts: contents
@@ -435,7 +426,9 @@ export default function Home() {
         requestPermission?: () => Promise<PermissionState>;
       };
       if (!DeviceMotion || typeof DeviceMotion.requestPermission !== "function") {
-        setShakePermission(true);
+        Promise.resolve().then(() => {
+          setShakePermission(true);
+        });
       }
     }
   }, []);
@@ -530,6 +523,7 @@ export default function Home() {
     return () => {
       window.removeEventListener("devicemotion", handleMotionEvent);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parsedMenu, currentView, isShaking, isLoadingRecommendation]);
 
   if (!mounted) {
@@ -599,8 +593,7 @@ export default function Home() {
     setBartenderIsm("Reading the menu... Glare is the enemy!");
 
     try {
-      let parsedData: ParsedMenu;
-      let contents: any[] = [];
+      let contents: unknown[] = [];
 
       if (!isText && menuImage) {
         // Strip base64 metadata prefix if present
@@ -643,7 +636,7 @@ export default function Home() {
         console.error("Zod Validation failure on Gemini response:", validationResult.error.format());
         throw new Error("Failed to validate parsed menu format. Try again.");
       }
-      parsedData = validationResult.data;
+      const parsedData = validationResult.data;
       if (!parsedData.drinks || parsedData.drinks.length === 0) {
         throw new Error("No drinks identified on this menu. Try pasting instead?");
       }
@@ -695,12 +688,12 @@ export default function Home() {
   const selectedVibeState = vibe;
 
   // Recommendation Engine Call
-  const getRecommendation = async (
+  async function getRecommendation(
     currentVibe: Vibe,
     currentAdventure: Adventure,
     currentExclusions: string[] = [],
     overridePick?: ParsedDrink
-  ) => {
+  ) {
     setIsLoadingRecommendation(true);
     setApiError(null);
 
@@ -815,7 +808,7 @@ Please generate justifications and customization secrets for the pick and the ru
     } finally {
       setIsLoadingRecommendation(false);
     }
-  };
+  }
 
   // Re-roll Option
   const handleReRoll = async () => {

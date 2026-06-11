@@ -18,7 +18,7 @@ function getAiClient() {
 
 async function generateContentWithRetry(
   ai: GoogleGenAI,
-  options: { model: string; contents: any[]; config?: any },
+  options: Parameters<GoogleGenAI["models"]["generateContent"]>[0],
   maxRetries = 2,
   baseDelayMs = 400
 ) {
@@ -26,7 +26,7 @@ async function generateContentWithRetry(
   while (true) {
     try {
       return await ai.models.generateContent(options);
-    } catch (error: any) {
+    } catch (error: unknown) {
       attempt++;
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`[Gemini API Error] Model: ${options.model}, Attempt: ${attempt}/${maxRetries}, Details:`, error);

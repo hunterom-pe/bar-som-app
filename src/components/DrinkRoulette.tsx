@@ -51,7 +51,7 @@ export const DrinkRoulette: React.FC<DrinkRouletteProps> = ({ drinks, onLanding,
       
       osc.start();
       osc.stop(ctx.currentTime + 0.03);
-    } catch (e) {
+    } catch {
       // AudioContext is blocked or unsupported
     }
   };
