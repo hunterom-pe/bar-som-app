@@ -183,14 +183,39 @@ async function callDirectGeminiClient(
     return JSON.parse(textOut);
   };
 
+  const attemptCallWithRetry = async (model: string, maxRetries = 2, baseDelay = 400) => {
+    let attempt = 0;
+    while (true) {
+      try {
+        return await attemptCall(model);
+      } catch (err: unknown) {
+        attempt++;
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        const isTransient = 
+          errorMessage.includes("503") || 
+          errorMessage.includes("429") || 
+          errorMessage.includes("UNAVAILABLE") || 
+          errorMessage.includes("RESOURCE_EXHAUSTED");
+        
+        if (!isTransient || attempt >= maxRetries) {
+          throw err;
+        }
+        
+        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 100;
+        console.warn(`Direct Gemini ${model} call failed (transient). Retrying in ${Math.round(delay)}ms...`, err);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  };
+
   // Try gemini-2.5-pro first
   try {
-    return await attemptCall("gemini-2.5-pro");
+    return await attemptCallWithRetry("gemini-2.5-pro");
   } catch (errPro) {
-    console.warn("gemini-2.5-pro direct call failed. Falling back to gemini-2.5-flash...", errPro);
+    console.warn("gemini-2.5-pro direct call failed after retries. Falling back to gemini-2.5-flash...", errPro);
     // Fallback to gemini-2.5-flash
     try {
-      return await attemptCall("gemini-2.5-flash");
+      return await attemptCallWithRetry("gemini-2.5-flash");
     } catch (errFlash) {
       console.error("Both gemini-2.5-pro and gemini-2.5-flash direct calls failed:", errFlash);
       throw errFlash;
