@@ -73,6 +73,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Bound request size so one oversized payload can't burn the API quota.
+    // A full parsed menu plus profile is comfortably under ~200k chars.
+    if (JSON.stringify(body).length > 400_000) {
+      return NextResponse.json(
+        { error: "Request too large." },
+        { status: 413, headers: corsHeaders }
+      );
+    }
+
     // 1. Use a client-supplied pick when present (the app selects drinks locally so
     //    the same drink is shown and justified); otherwise compute it from the menu.
     let pick: ParsedDrink | null;

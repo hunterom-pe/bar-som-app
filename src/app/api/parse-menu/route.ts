@@ -73,6 +73,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Bound request size so one oversized payload can't burn the API quota.
+    // ~2MB base64 image (a 1600px compressed JPEG is well under this) and ~20k
+    // chars of menu text are generous for real menus.
+    const MAX_IMAGE_CHARS = 2_800_000; // ~2MB of base64
+    const MAX_TEXT_CHARS = 20_000;
+    if (typeof image === "string" && image.length > MAX_IMAGE_CHARS) {
+      return NextResponse.json(
+        { error: "That image is too large. Try a tighter crop of the menu." },
+        { status: 413, headers: corsHeaders }
+      );
+    }
+    if (typeof text === "string" && text.length > MAX_TEXT_CHARS) {
+      return NextResponse.json(
+        { error: "That menu text is too long. Paste just the drinks section." },
+        { status: 413, headers: corsHeaders }
+      );
+    }
+
     const ai = getAiClient();
     let contents: Array<string | { text: string } | { inlineData: { mimeType: string; data: string } }> = [];
 
