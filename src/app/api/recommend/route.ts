@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { recommendDrink } from "@/lib/recommendation";
-import { DrinkRating } from "@/lib/types";
+import { DrinkRating, ParsedDrink } from "@/lib/types";
 
 let aiClient: GoogleGenAI | null = null;
 
@@ -29,7 +29,6 @@ async function generateContentWithRetry(
     } catch (error: unknown) {
       attempt++;
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`[Gemini API Error] Model: ${options.model}, Attempt: ${attempt}/${maxRetries}, Details:`, error);
 
       const isClientError =
         errorMessage.includes("400") ||
@@ -44,9 +43,6 @@ async function generateContentWithRetry(
       }
 
       const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 100;
-      console.warn(
-        `Retrying Gemini API call for ${options.model} in ${Math.round(delay)}ms...`
-      );
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
@@ -70,22 +66,36 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { menu, vibe, adventure, profile, excludeIds = [], zeroProof = false } = body;
 
-    if (!menu || !vibe || !adventure || !profile) {
+    if (!vibe || !adventure || !profile) {
       return NextResponse.json(
-        { error: "Missing required fields (menu, vibe, adventure, profile)." },
+        { error: "Missing required fields (vibe, adventure, profile)." },
         { status: 400, headers: corsHeaders }
       );
     }
 
-    // 1. Compute recommendation locally
-    const { pick, runnerUp } = recommendDrink({
-      menu,
-      vibe,
-      adventure,
-      profile,
-      excludeIds,
-      zeroProof
-    });
+    // 1. Use a client-supplied pick when present (the app selects drinks locally so
+    //    the same drink is shown and justified); otherwise compute it from the menu.
+    let pick: ParsedDrink | null;
+    let runnerUp: ParsedDrink | null;
+    if (body.pick) {
+      pick = body.pick as ParsedDrink;
+      runnerUp = (body.runnerUp as ParsedDrink) ?? null;
+    } else {
+      if (!menu) {
+        return NextResponse.json(
+          { error: "Missing required field (menu or pick)." },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+      ({ pick, runnerUp } = recommendDrink({
+        menu,
+        vibe,
+        adventure,
+        profile,
+        excludeIds,
+        zeroProof
+      }));
+    }
 
     if (!pick) {
       return NextResponse.json({
@@ -170,8 +180,7 @@ Please generate justifications and customization secrets for the pick and the ru
           responseSchema: schema
         }
       });
-    } catch (err: unknown) {
-      console.warn("gemini-2.5-pro failed after retries. Falling back to gemini-2.5-flash...", err);
+    } catch {
       response = await generateContentWithRetry(ai, {
         model: "gemini-2.5-flash",
         contents: [

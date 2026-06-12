@@ -29,7 +29,6 @@ async function generateContentWithRetry(
     } catch (error: unknown) {
       attempt++;
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`[Gemini API Error] Model: ${options.model}, Attempt: ${attempt}/${maxRetries}, Details:`, error);
 
       const isClientError =
         errorMessage.includes("400") ||
@@ -44,9 +43,6 @@ async function generateContentWithRetry(
       }
 
       const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 100;
-      console.warn(
-        `Retrying Gemini API call for ${options.model} in ${Math.round(delay)}ms...`
-      );
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
@@ -125,8 +121,7 @@ export async function POST(request: NextRequest) {
           responseSchema: GEMINI_RESPONSE_SCHEMA
         }
       });
-    } catch (err: unknown) {
-      console.warn("gemini-2.5-pro failed after retries. Falling back to gemini-2.5-flash...", err);
+    } catch {
       response = await generateContentWithRetry(ai, {
         model: "gemini-2.5-flash",
         contents,

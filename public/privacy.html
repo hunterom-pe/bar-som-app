@@ -46,22 +46,20 @@
     <p>Spec ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how our mobile application handles information when you use it.</p>
 
     <h2>1. Information We Collect</h2>
-    <p><strong>Offline Local Usage:</strong> By default, the application runs entirely on your device using local storage. We do not collect, transmit, or store any personal information on private servers during offline usage. Your drink history, ratings, and flavor preferences remain stored locally on your physical device.</p>
-    <p><strong>Menu Scanning (Camera / Photo Library):</strong> The app requires Camera and Photo Library permissions to let you photograph or upload drink menus. Images are used strictly to extract drink text locally and are processed temporarily. We do not store or upload your menu images permanently to any database.</p>
-    <p><strong>Cloud Profile Sync (Optional):</strong> If you choose to authenticate and create an account, your flavor profile, favorites, and menu history are synced securely using Firebase Services (Firestore database) solely to enable sync across your devices.</p>
+    <p><strong>On-Device Storage Only:</strong> The application does not require an account and runs entirely on your device. Your drink history, ratings, flavor preferences, favorites, and scan history are stored only in your device's local storage. We do not operate user accounts and do not store this information on our servers. You can permanently erase all of it at any time using the "Reset Data" option in the app.</p>
+    <p><strong>Menu Scanning (Camera / Photo Library):</strong> The app uses Camera and Photo Library permissions to let you photograph or upload a drink menu. To read the menu, the menu image or pasted menu text is sent to the Google Gemini API for analysis (see Section 2). We do not retain these images or text on our own servers after the menu is processed.</p>
 
     <h2>2. Third-Party Services</h2>
-    <p>We use the following third-party services to process features inside the app:</p>
+    <p>We use the following third-party service to process menus inside the app:</p>
     <ul>
-        <li><strong>Google Gemini API / Generative Language API:</strong> Used to analyze menu text lists and generate cocktail recommendations. Text extracted from menus is sent temporarily to Google Gemini endpoints. This data is not linked to your personal identity.</li>
-        <li><strong>Google Firebase (Firestore & Auth):</strong> Used to handle authentication and database sync if you choose to sign up.</li>
+        <li><strong>Google Gemini API / Generative Language API:</strong> Used to read menu images or text and identify drinks so we can generate a recommendation. The menu image or text is sent to Google's endpoints for processing. This request is not linked to a personal account or identity. Google's handling of this data is governed by Google's own privacy policy and API terms.</li>
     </ul>
 
     <h2>3. Children's Privacy</h2>
-    <p>Our application references cocktails and is intended strictly for users of legal drinking age. We do not knowingly collect personal data from anyone under the age of 18 or 21 (depending on local jurisdiction).</p>
+    <p>Our application references cocktails and is intended strictly for users of legal drinking age. We do not knowingly collect personal data from anyone under the legal drinking age in their jurisdiction.</p>
 
     <h2>4. Contact Us</h2>
-    <p>If you have any questions about this Privacy Policy, you can reach out to us at: <em>support@specapp.com</em>.</p>
+    <p>If you have any questions about this Privacy Policy, you can reach out to us at: <em>hunterom8@proton.me</em>.</p>
 
     <footer>
         &copy; 2026 Spec App. All rights reserved.

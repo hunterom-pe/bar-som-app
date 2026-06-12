@@ -1,19 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { auth, isFirebaseEnabled } from "@/lib/firebase";
 import { ParsedDrink, ParsedMenu, TasteProfile, Vibe, Adventure, DrinkRating, FlavorDimension } from "@/lib/types";
-import { ProfileStore, CloudProfileStore } from "@/lib/profile-store";
+import { ProfileStore } from "@/lib/profile-store";
 import { PalateChart } from "@/components/PalateChart";
 import { PalateCalibration } from "@/components/PalateCalibration";
 import { DrinkRoulette } from "@/components/DrinkRoulette";
 import { cosineSimilarity } from "@/lib/recommendation";
 import { compressImage } from "@/lib/image";
 import SplashScreen from "@/app/components/SplashScreen";
-import AuthScreen from "@/app/components/AuthScreen";
 import CocktailVisualizer from "@/app/components/CocktailVisualizer";
-import { ParsedMenuSchema, GEMINI_RESPONSE_SCHEMA } from "@/lib/schemas";
+import { ParsedMenuSchema } from "@/lib/schemas";
 import { recommendDrink } from "@/lib/recommendation";
 
 const BARTENDER_ISMS = [
@@ -134,103 +131,49 @@ function KeyIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-async function callDirectGeminiClient(
-  contents: unknown[],
-  schema: unknown,
-  systemInstruction?: string
-) {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+// Base URL for the backend API. In the packaged iOS app this is the Netlify
+// deployment (set via NEXT_PUBLIC_API_URL at build time); empty means same-origin
+// for the web build. The Gemini key lives only on the server — never in the client.
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
-  const attemptCall = async (model: string) => {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    const body: Record<string, unknown> = {
-      contents: [
-        {
-          parts: contents
-        }
-      ],
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: schema
-      }
-    };
-    if (systemInstruction) {
-      body.systemInstruction = {
-        parts: [
-          { text: systemInstruction }
-        ]
-      };
-    }
-
-    const res = await fetch(url, {
+// POST JSON to a backend API route with light backoff on transient (429/503) errors.
+async function postToApi<T>(path: string, payload: unknown, maxRetries = 2): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    const res = await fetch(`${API_BASE}${path}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
     });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`HTTP ${res.status}: ${errText}`);
+    if (res.ok) {
+      return (await res.json()) as T;
     }
 
-    const data = await res.json();
-    const textOut = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!textOut) {
-      throw new Error("Empty response from Gemini API");
-    }
-    return JSON.parse(textOut);
-  };
-
-  const attemptCallWithRetry = async (model: string, maxRetries = 2, baseDelay = 400) => {
-    let attempt = 0;
-    while (true) {
-      try {
-        return await attemptCall(model);
-      } catch (err: unknown) {
-        attempt++;
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        const isTransient = 
-          errorMessage.includes("503") || 
-          errorMessage.includes("429") || 
-          errorMessage.includes("UNAVAILABLE") || 
-          errorMessage.includes("RESOURCE_EXHAUSTED");
-        
-        if (!isTransient || attempt >= maxRetries) {
-          throw err;
-        }
-        
-        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 100;
-        console.warn(`Direct Gemini ${model} call failed (transient). Retrying in ${Math.round(delay)}ms...`, err);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-  };
-
-  // Try gemini-2.5-pro first
-  try {
-    return await attemptCallWithRetry("gemini-2.5-pro");
-  } catch (errPro) {
-    console.warn("gemini-2.5-pro direct call failed after retries. Falling back to gemini-2.5-flash...", errPro);
-    // Fallback to gemini-2.5-flash
+    const isTransient = res.status === 429 || res.status === 503;
+    let message = `Request failed (${res.status})`;
     try {
-      return await attemptCallWithRetry("gemini-2.5-flash");
-    } catch (errFlash) {
-      console.error("Both gemini-2.5-pro and gemini-2.5-flash direct calls failed:", errFlash);
-      throw errFlash;
+      const data = await res.json();
+      if (data?.error) message = data.error;
+    } catch {
+      // non-JSON error body; keep the default message
     }
+
+    attempt++;
+    if (!isTransient || attempt > maxRetries) {
+      throw new Error(message);
+    }
+
+    const delay = 400 * Math.pow(2, attempt) + Math.random() * 100;
+    await new Promise((resolve) => setTimeout(resolve, delay));
   }
 }
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   
-  // Auth & Onboarding States
+  // Onboarding States
   const [showSplash, setShowSplash] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [offlineMode, setOfflineMode] = useState(false);
   interface MenuSearch {
     id: string;
     barName: string;
@@ -299,104 +242,46 @@ export default function Home() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load user data helper (favorites & searches history)
-  const loadUserData = async (currentUser: User | null, isOffline: boolean) => {
-    if (currentUser && !isOffline) {
-      const p = await CloudProfileStore.getCloudProfile(currentUser.uid);
-      setProfile(p);
-      const favs = await CloudProfileStore.getFavoriteDrinks(currentUser.uid);
-      setFavorites(favs);
-      const searches = await CloudProfileStore.getMenuSearches(currentUser.uid);
-      setMenuSearches(searches);
-    } else {
-      setProfile(ProfileStore.getProfile());
-      setFavorites(ProfileStore.getFavoriteDrinksLocal());
-      setMenuSearches(ProfileStore.getMenuSearchesLocal());
-    }
+  // Load all locally stored data (profile, favorites & searches history)
+  const loadUserData = () => {
+    setProfile(ProfileStore.getProfile());
+    setFavorites(ProfileStore.getFavoriteDrinksLocal());
+    setMenuSearches(ProfileStore.getMenuSearchesLocal());
   };
 
-  // Mount check and Firebase setup
+  // Mount check and local data load
   useEffect(() => {
     const timer = setTimeout(() => {
       // Load age gate status
       const gate = localStorage.getItem("spec_age_gate");
       setAgeGateCompleted(gate === "true");
       setMounted(true);
+      loadUserData();
     }, 0);
 
-    // Register service worker for PWA
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch((err) => {
-        console.error("Service worker registration failed:", err);
-      });
-    }
-
-    // Set up Firebase Auth listener if active
-    let unsubscribe = () => {};
-    let offlineTimer: NodeJS.Timeout;
-
-    if (isFirebaseEnabled() && auth) {
-      unsubscribe = onAuthStateChanged(auth, async (currentUser: User | null) => {
-        setAuthLoading(true);
-        if (currentUser) {
-          setUser(currentUser);
-          setOfflineMode(false);
-          
-          // Merge offline local profile into the newly logged-in cloud account
-          const offlineProfile = ProfileStore.getProfile();
-          const merged = await CloudProfileStore.mergeOfflineProfileIntoCloud(currentUser.uid, offlineProfile);
-          setProfile(merged);
-          
-          // Reset local profile storage to avoid duplicate merges in the future
-          ProfileStore.resetPalate();
-          
-          // Load user favorites & scanned searches
-          const favs = await CloudProfileStore.getFavoriteDrinks(currentUser.uid);
-          setFavorites(favs);
-          const searches = await CloudProfileStore.getMenuSearches(currentUser.uid);
-          setMenuSearches(searches);
-        } else {
-          setUser(null);
-          // Load local storage fallback
-          await loadUserData(null, true);
-        }
-        setAuthLoading(false);
-      });
-    } else {
-      // Fallback directly to offline local storage if Firebase is disabled or missing credentials
-      offlineTimer = setTimeout(() => {
-        setOfflineMode(true);
-        setAuthLoading(false);
-        loadUserData(null, true);
-      }, 0);
+    // Register the PWA service worker only on the web — inside the native
+    // (Capacitor) shell it can serve stale assets after an app update.
+    const isNative = typeof window !== "undefined" && "Capacitor" in window;
+    if (!isNative && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
 
     return () => {
       clearTimeout(timer);
-      if (offlineTimer) {
-        clearTimeout(offlineTimer);
-      }
-      unsubscribe();
     };
   }, []);
 
   // Check if current drink recommendation is favorited
   useEffect(() => {
-    const checkIsFavorited = async () => {
+    const checkIsFavorited = () => {
       if (!activePick) {
         setIsFavorited(false);
         return;
       }
-      if (user && !offlineMode) {
-        const fav = await CloudProfileStore.isDrinkFavorited(user.uid, activePick.name);
-        setIsFavorited(fav);
-      } else {
-        const fav = ProfileStore.isDrinkFavoritedLocal(activePick.name);
-        setIsFavorited(fav);
-      }
+      setIsFavorited(ProfileStore.isDrinkFavoritedLocal(activePick.name));
     };
     checkIsFavorited();
-  }, [activePick, user, offlineMode]);
+  }, [activePick]);
 
   // Bartender-ism rotation loop during loading
   useEffect(() => {
@@ -574,18 +459,19 @@ export default function Home() {
     }
   };
 
-  // Sign Out Action
-  const handleSignOut = async () => {
-    if (auth) {
-      try {
-        await signOut(auth);
-        setUser(null);
-        setOfflineMode(false);
-        resetStateToLanding();
-      } catch (err) {
-        console.error("Sign out error:", err);
-      }
-    }
+  // Reset all locally stored data (palate, favorites, scan history)
+  const handleResetAllData = () => {
+    const confirmed =
+      typeof window === "undefined" ||
+      window.confirm(
+        "Reset all data? This permanently clears your palate, favorites, and scan history from this device."
+      );
+    if (!confirmed) return;
+    ProfileStore.resetAll();
+    setProfile(ProfileStore.getProfile());
+    setFavorites([]);
+    setMenuSearches([]);
+    resetStateToLanding();
   };
 
   // Image Upload Capture
@@ -618,47 +504,16 @@ export default function Home() {
     setBartenderIsm("Reading the menu... Glare is the enemy!");
 
     try {
-      let contents: unknown[] = [];
+      // The Gemini key lives server-side; send the raw menu to the backend route.
+      const payload = !isText && menuImage
+        ? { image: menuImage }
+        : { text: menuText };
 
-      if (!isText && menuImage) {
-        // Strip base64 metadata prefix if present
-        const matches = menuImage.match(/^data:(image\/\w+);base64,(.+)$/);
-        let mimeType = "image/jpeg";
-        let base64Data = menuImage;
-
-        if (matches) {
-          mimeType = matches[1];
-          base64Data = matches[2];
-        }
-
-        contents = [
-          {
-            inlineData: {
-              mimeType,
-              data: base64Data
-            }
-          },
-          {
-            text: "Parse this menu image. Extract every menu item and drink into the response schema. For each item: generate a short unique ID, identify base ingredients/spirits, assign a style family (or 'other'), score flavor dimensions 0-10 based on its profile, and categorize the ABV."
-          }
-        ];
-      } else {
-        contents = [
-          {
-            text: `Parse this menu text. Extract every menu item and drink into the response schema. For each item: generate a short unique ID, identify base ingredients/spirits, assign a style family (or 'other'), score flavor dimensions 0-10 based on its profile, and categorize the ABV.
-            
-            Menu text:
-            ${menuText}`
-          }
-        ];
-      }
-
-      const rawParsed = await callDirectGeminiClient(contents, GEMINI_RESPONSE_SCHEMA);
+      const rawParsed = await postToApi<unknown>("/api/parse-menu", payload);
 
       // Validate structure using Zod safeParse on client
       const validationResult = ParsedMenuSchema.safeParse(rawParsed);
       if (!validationResult.success) {
-        console.error("Zod Validation failure on Gemini response:", validationResult.error.format());
         throw new Error("Failed to validate parsed menu format. Try again.");
       }
       const parsedData = validationResult.data;
@@ -668,26 +523,14 @@ export default function Home() {
 
       setParsedMenu(parsedData);
 
-      // Save menu search to user account history
-      if (user && !offlineMode) {
-        await CloudProfileStore.saveMenuSearch(
-          user.uid,
-          parsedData.barName || "Menu Search",
-          menuText,
-          menuImage,
-          parsedData.drinks
-        );
-        const searches = await CloudProfileStore.getMenuSearches(user.uid);
-        setMenuSearches(searches);
-      } else {
-        ProfileStore.saveMenuSearchLocal(
-          parsedData.barName || "Menu Search",
-          menuText,
-          menuImage,
-          parsedData.drinks
-        );
-        setMenuSearches(ProfileStore.getMenuSearchesLocal());
-      }
+      // Save menu search to local history
+      ProfileStore.saveMenuSearchLocal(
+        parsedData.barName || "Menu Search",
+        menuText,
+        menuImage,
+        parsedData.drinks
+      );
+      setMenuSearches(ProfileStore.getMenuSearchesLocal());
 
       setMoodStep(1);
       setCurrentView("mood-questions");
@@ -746,72 +589,34 @@ export default function Home() {
         throw new Error("No matching drinks found on this menu.");
       }
 
-      // 2. Build prompts for Gemini
-      const systemInstruction = `You are a sharp, warm bartender friend. Your tone is confident, specific, a little playful, and never sommelier-pretentious.
-Write a one-sentence justification (maximum 25 words) for why the user should drink the recommended cocktail based on their current mood, adventure setting, and taste profile.
-Also write a brief, highly specific bartender customization secret or ordering tip (maximum 12 words) for the recommended cocktail (e.g. "Order with a mezcal float", "Ask for extra orange peel", "Request an olive rinse").
-If a runner-up is provided, also write a justification and customization secret for it.
+      // 2. Ask the backend (which holds the Gemini key) to write the bartender's
+      //    justification & customization for the drinks we already picked locally.
+      let pickJustification = `The ${pick.name} matches your vibe perfectly tonight.`;
+      let pickCustomization = "Order it exactly as specified on the menu.";
+      let runnerUpJustification = runnerUp ? `Alternatively, the ${runnerUp.name} is a fantastic choice.` : "";
+      let runnerUpCustomization = runnerUp ? "Enjoy it standard or ask your bartender's opinion." : "";
 
-Here are examples of how you talk:
-- Justification: "The mezcal paloma — smoky enough to be interesting, light enough for round two."
-  Customization: "Ask the bartender for a smoked salt rim."
-- Justification: "You always come back to bitter-and-stirred. The Black Manhattan is that, but with a twist you haven't met."
-  Customization: "Ask for orange bitters instead of Angostura."
+      try {
+        const rawResult = await postToApi<{
+          justification?: string;
+          customization?: string;
+          runnerUpJustification?: string;
+          runnerUpCustomization?: string;
+        }>("/api/recommend", {
+          pick,
+          runnerUp,
+          vibe: currentVibe,
+          adventure: currentAdventure,
+          profile: userProfile
+        });
 
-Do not use generic explanations. Highlight specific flavor interactions or vibe alignment.`;
-
-      const promptText = `
-Vibe: ${currentVibe}
-Adventure Setting: ${currentAdventure}
-User Taste Profile affinities (0-10): ${JSON.stringify(userProfile.affinities)}
-User Palate History: ${userProfile.history.slice(-5).map((h: DrinkRating) => `${h.drinkName} (${h.rating})`).join(", ") || "None yet"}
- 
-Recommended Drink:
-- Name: ${pick.name}
-- Style: ${pick.styleFamily}
-- Ingredients: ${pick.ingredients.join(", ")}
-- Description: ${pick.description || "N/A"}
-- Flavor Vector: ${JSON.stringify(pick.flavorVector)}
- 
-Runner-up Drink:
-${runnerUp ? `- Name: ${runnerUp.name}
-- Style: ${runnerUp.styleFamily}
-- Ingredients: ${runnerUp.ingredients.join(", ")}
-- Description: ${runnerUp.description || "N/A"}
-- Flavor Vector: ${JSON.stringify(runnerUp.flavorVector)}` : "None"}
- 
-Please generate justifications and customization secrets for the pick and the runner-up.
-`;
-
-      const schema = {
-        type: "OBJECT",
-        properties: {
-          pickJustification: {
-            type: "STRING",
-            description: "One-sentence justification (max 25 words) for the primary recommended drink."
-          },
-          pickCustomization: {
-            type: "STRING",
-            description: "A short, specific bartender ordering tweak or customization secret (max 12 words) for the primary recommended drink."
-          },
-          runnerUpJustification: {
-            type: "STRING",
-            description: "One-sentence justification (max 25 words) for the runner-up drink (if none, return empty string)."
-          },
-          runnerUpCustomization: {
-            type: "STRING",
-            description: "A short, specific bartender ordering tweak or customization secret (max 12 words) for the runner-up drink (if none, return empty string)."
-          }
-        },
-        required: ["pickJustification", "pickCustomization", "runnerUpJustification", "runnerUpCustomization"]
-      };
-
-      const rawResult = await callDirectGeminiClient([{ text: promptText }], schema, systemInstruction);
-
-      const pickJustification = rawResult.pickJustification || `The ${pick.name} matches your vibe perfectly tonight.`;
-      const pickCustomization = rawResult.pickCustomization || "Order it exactly as specified on the menu.";
-      const runnerUpJustification = rawResult.runnerUpJustification || (runnerUp ? `Alternatively, the ${runnerUp.name} is a fantastic choice.` : "");
-      const runnerUpCustomization = rawResult.runnerUpCustomization || (runnerUp ? "Enjoy it standard or ask your bartender's opinion." : "");
+        if (rawResult.justification) pickJustification = rawResult.justification;
+        if (rawResult.customization) pickCustomization = rawResult.customization;
+        if (runnerUp && rawResult.runnerUpJustification) runnerUpJustification = rawResult.runnerUpJustification;
+        if (runnerUp && rawResult.runnerUpCustomization) runnerUpCustomization = rawResult.runnerUpCustomization;
+      } catch {
+        // Keep the local fallbacks above if the justification service is unavailable.
+      }
 
       const finalData = {
         pick,
@@ -865,7 +670,6 @@ Please generate justifications and customization secrets for the pick and the ru
   const handleRateDrink = async (ratingValue: "loved" | "fine" | "nope") => {
     if (!ratingDrink || !vibe) return;
 
-    let updatedProfile;
     const ratingData = {
       drinkName: ratingDrink.name,
       styleFamily: ratingDrink.styleFamily,
@@ -874,11 +678,7 @@ Please generate justifications and customization secrets for the pick and the ru
       vibe
     };
 
-    if (user && !offlineMode) {
-      updatedProfile = await CloudProfileStore.addCloudRating(user.uid, ratingData);
-    } else {
-      updatedProfile = ProfileStore.addRating(ratingData);
-    }
+    const updatedProfile = ProfileStore.addRating(ratingData);
 
     setProfile(updatedProfile);
     setShowRatingFeedback(true);
@@ -892,16 +692,9 @@ Please generate justifications and customization secrets for the pick and the ru
 
   // Toggle Favorite Status
   const handleToggleFavorite = async (drink: ParsedDrink) => {
-    if (user && !offlineMode) {
-      const added = await CloudProfileStore.toggleFavoriteDrink(user.uid, drink);
-      setIsFavorited(added);
-      const favs = await CloudProfileStore.getFavoriteDrinks(user.uid);
-      setFavorites(favs);
-    } else {
-      const added = ProfileStore.toggleFavoriteDrinkLocal(drink);
-      setIsFavorited(added);
-      setFavorites(ProfileStore.getFavoriteDrinksLocal());
-    }
+    const added = ProfileStore.toggleFavoriteDrinkLocal(drink);
+    setIsFavorited(added);
+    setFavorites(ProfileStore.getFavoriteDrinksLocal());
   };
 
   const handleToggleHistoryFavorite = async (item: DrinkRating) => {
@@ -942,13 +735,7 @@ Please generate justifications and customization secrets for the pick and the ru
 
   const handleResetPalate = async () => {
     if (confirm("Reset your palate history? This cannot be undone.")) {
-      let reset;
-      if (user && !offlineMode) {
-        reset = await CloudProfileStore.resetCloudPalate(user.uid);
-      } else {
-        reset = ProfileStore.resetPalate();
-      }
-      setProfile(reset);
+      setProfile(ProfileStore.resetPalate());
     }
   };
 
@@ -962,12 +749,8 @@ Please generate justifications and customization secrets for the pick and the ru
       affinities: newAffinities,
     };
     
-    if (user && !offlineMode) {
-      await CloudProfileStore.saveCloudProfile(user.uid, updatedProfile);
-    } else {
-      ProfileStore.saveProfile(updatedProfile);
-    }
-    
+    ProfileStore.saveProfile(updatedProfile);
+
     setProfile(updatedProfile);
     if (isZeroProofSelected) {
       setZeroProof(true);
@@ -1059,28 +842,21 @@ Please generate justifications and customization secrets for the pick and the ru
           </div>
           <footer className="text-xs text-zinc-400 font-medium tracking-wide">
             Drink responsibly. Must be of legal drinking age.
+            <br />
+            <a
+              href="https://bar-som-app.netlify.app/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-zinc-500 hover:text-amber-400 transition-colors"
+            >
+              Privacy Policy
+            </a>
           </footer>
         </div>
       )}
 
-      {/* Auth Gate Screen (shown if Firebase active, not loaded, and not offline mode) */}
-      {ageGateCompleted && !authLoading && !user && !offlineMode && (
-        <AuthScreen 
-          onSuccess={() => setOfflineMode(false)} 
-          onContinueOffline={() => setOfflineMode(true)} 
-        />
-      )}
-
-      {/* Loading overlay when checking Firebase Auth state */}
-      {ageGateCompleted && authLoading && (
-        <div className="flex-grow flex flex-col items-center justify-center text-center">
-          <div className="w-12 h-12 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin mb-4"></div>
-          <p className="text-zinc-500 font-mono text-xs tracking-wider">PREPARING ACCOUNT...</p>
-        </div>
-      )}
-
-      {/* Main app layout (shown if age gate complete and authenticated/offline mode) */}
-      {ageGateCompleted && !authLoading && (user || offlineMode) && (
+      {/* Main app layout (shown once the age gate is complete) */}
+      {ageGateCompleted && (
         <>
           {/* Header */}
           {currentView !== "parsing" && !isLoadingRecommendation && (
@@ -1094,25 +870,12 @@ Please generate justifications and customization secrets for the pick and the ru
                 </button>
               </h1>
               <div className="flex items-center gap-4">
-                {user && (
-                  <button
-                    onClick={handleSignOut}
-                    className="text-xs text-zinc-500 hover:text-zinc-400 font-semibold cursor-pointer underline transition-colors"
-                  >
-                    Sign Out
-                  </button>
-                )}
-                {!user && isFirebaseEnabled() && (
-                  <button
-                    onClick={() => {
-                      setOfflineMode(false);
-                      setCurrentView("landing");
-                    }}
-                    className="px-3 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-500 rounded-full text-xs font-semibold tracking-wider uppercase transition-colors cursor-pointer"
-                  >
-                    Sign In
-                  </button>
-                )}
+                <button
+                  onClick={handleResetAllData}
+                  className="text-xs text-zinc-500 hover:text-zinc-400 font-semibold cursor-pointer underline transition-colors"
+                >
+                  Reset Data
+                </button>
               </div>
             </header>
           )}
@@ -1211,6 +974,15 @@ Please generate justifications and customization secrets for the pick and the ru
                 {/* Subtle Legal Disclaimer */}
                 <div className="text-center text-[10px] text-zinc-500 font-medium tracking-wide mt-8 select-none">
                   Drink responsibly. Must be of legal drinking age.
+                  {" · "}
+                  <a
+                    href="https://bar-som-app.netlify.app/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-amber-400 transition-colors"
+                  >
+                    Privacy Policy
+                  </a>
                 </div>
               </div>
             )}
